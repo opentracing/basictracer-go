@@ -1,4 +1,4 @@
-package basictracer_test
+package testutils
 
 import (
 	"sync"

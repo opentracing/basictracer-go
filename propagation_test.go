@@ -7,13 +7,14 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/opentracing/basictracer-go"
+	"github.com/opentracing/basictracer-go/testutils"
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
 func TestSpanPropagator(t *testing.T) {
 	var err error
 	const op = "test"
-	recorder := NewInMemoryRecorder()
+	recorder := testutils.NewInMemoryRecorder()
 	tracer := basictracer.New(recorder)
 
 	sp := tracer.StartSpan(op)

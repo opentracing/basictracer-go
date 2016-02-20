@@ -1,5 +1,5 @@
 # basictracer-go
-The Go incarnation of the BasicTracer cross-platform reference implementation for OpenTracing.
+The Go incarnation of the cross-platform "BasicTracer" reference impl for OpenTracing.
 
 ## Status
 

@@ -1,4 +1,4 @@
-package standardtracer_test
+package basictracer_test
 
 import (
 	"reflect"
@@ -6,16 +6,15 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/opentracing/basictracer-go"
 	opentracing "github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/standardtracer"
-	"github.com/opentracing/opentracing-go/testutils"
 )
 
 func TestSpanPropagator(t *testing.T) {
 	var err error
 	const op = "test"
-	recorder := testutils.NewInMemoryRecorder()
-	tracer := standardtracer.New(recorder)
+	recorder := NewInMemoryRecorder()
+	tracer := basictracer.New(recorder)
 
 	sp := tracer.StartSpan(op)
 	sp.SetTraceAttribute("foo", "bar")

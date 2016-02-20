@@ -1,4 +1,4 @@
-package standardtracer
+package basictracer
 
 import (
 	"bytes"
@@ -100,7 +100,7 @@ func (p *splitTextPropagator) JoinTrace(
 
 	sp := p.tracer.getSpan()
 	sp.raw = RawSpan{
-		StandardContext: StandardContext{
+		Context: Context{
 			TraceID:      traceID,
 			SpanID:       randomID(),
 			ParentSpanID: propagatedSpanID,
@@ -233,7 +233,7 @@ func (p *splitBinaryPropagator) JoinTrace(
 
 	sp := p.tracer.getSpan()
 	sp.raw = RawSpan{
-		StandardContext: StandardContext{
+		Context: Context{
 			TraceID:      traceID,
 			SpanID:       randomID(),
 			ParentSpanID: propagatedSpanID,

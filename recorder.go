@@ -1,4 +1,4 @@
-package standardtracer
+package basictracer
 
 // A SpanRecorder handles all of the `RawSpan` data generated via an
 // associated `Tracer` (see `NewStandardTracer`) instance. It also names

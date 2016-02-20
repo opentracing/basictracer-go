@@ -1,4 +1,4 @@
-package standardtracer
+package basictracer
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 )
 
 // Implements the `Span` interface. Created via tracerImpl (see
-// `standardtracer.New()`).
+// `basictracer.New()`).
 type spanImpl struct {
 	tracer     *tracerImpl
 	sync.Mutex // protects the fields below

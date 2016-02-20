@@ -1,4 +1,4 @@
-package standardtracer
+package basictracer
 
 import (
 	"math/rand"

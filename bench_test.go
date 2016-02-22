@@ -32,7 +32,7 @@ func executeOps(sp opentracing.Span, numEvent, numTag, numAttr int) {
 		sp.SetTag(tags[j], nil)
 	}
 	for j := 0; j < numAttr; j++ {
-		sp.SetTraceAttribute(tags[j], tags[j])
+		sp.SetBaggageItem(tags[j], tags[j])
 	}
 }
 
@@ -78,11 +78,11 @@ func BenchmarkSpan_1000Tags(b *testing.B) {
 	benchmarkWithOps(b, 0, 100, 0)
 }
 
-func BenchmarkSpan_100Attributes(b *testing.B) {
+func BenchmarkSpan_100BaggageItems(b *testing.B) {
 	benchmarkWithOps(b, 0, 0, 100)
 }
 
-func BenchmarkTrimmedSpan_100Events_100Tags_100Attributes(b *testing.B) {
+func BenchmarkTrimmedSpan_100Events_100Tags_100BaggageItems(b *testing.B) {
 	var r countingRecorder
 	opts := DefaultOptions()
 	opts.TrimUnsampledSpans = true
@@ -158,7 +158,7 @@ func BenchmarkInject_SplitText_Empty(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitText, 0)
 }
 
-func BenchmarkInject_SplitText_100Attributes(b *testing.B) {
+func BenchmarkInject_SplitText_100BaggaeItems(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitText, 100)
 }
 
@@ -166,7 +166,7 @@ func BenchmarkInject_GoHTTPHeader_Empty(b *testing.B) {
 	benchmarkInject(b, opentracing.GoHTTPHeader, 0)
 }
 
-func BenchmarkInject_GoHTTPHeader_100Attributes(b *testing.B) {
+func BenchmarkInject_GoHTTPHeader_100BaggageItems(b *testing.B) {
 	benchmarkInject(b, opentracing.GoHTTPHeader, 100)
 }
 
@@ -174,7 +174,7 @@ func BenchmarkInject_SplitBinary_Empty(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitBinary, 0)
 }
 
-func BenchmarkInject_SplitBinary_100Attributes(b *testing.B) {
+func BenchmarkInject_SplitBinary_100BaggageItems(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitBinary, 100)
 }
 
@@ -182,7 +182,7 @@ func BenchmarkExtract_SplitText_Empty(b *testing.B) {
 	benchmarkExtract(b, opentracing.SplitText, 0)
 }
 
-func BenchmarkExtract_SplitText_100Attributes(b *testing.B) {
+func BenchmarkExtract_SplitText_100BaggageItems(b *testing.B) {
 	benchmarkExtract(b, opentracing.SplitText, 100)
 }
 
@@ -190,7 +190,7 @@ func BenchmarkExtract_GoHTTPHeader_Empty(b *testing.B) {
 	benchmarkExtract(b, opentracing.GoHTTPHeader, 0)
 }
 
-func BenchmarkExtract_GoHTTPHeader_100Attributes(b *testing.B) {
+func BenchmarkExtract_GoHTTPHeader_100BaggageItems(b *testing.B) {
 	benchmarkExtract(b, opentracing.GoHTTPHeader, 100)
 }
 
@@ -198,6 +198,6 @@ func BenchmarkExtract_SplitBinary_Empty(b *testing.B) {
 	benchmarkExtract(b, opentracing.SplitBinary, 0)
 }
 
-func BenchmarkExtract_SplitBinary_100Attributes(b *testing.B) {
+func BenchmarkExtract_SplitBinary_100BaggageItems(b *testing.B) {
 	benchmarkExtract(b, opentracing.SplitBinary, 100)
 }

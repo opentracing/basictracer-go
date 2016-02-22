@@ -18,7 +18,7 @@ func TestSpanPropagator(t *testing.T) {
 	tracer := basictracer.New(recorder)
 
 	sp := tracer.StartSpan(op)
-	sp.SetTraceAttribute("foo", "bar")
+	sp.SetBaggageItem("foo", "bar")
 
 	textCarrier := opentracing.NewSplitTextCarrier()
 	err = tracer.Injector(opentracing.SplitText).InjectSpan(sp, textCarrier)

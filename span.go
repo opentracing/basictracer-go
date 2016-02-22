@@ -20,7 +20,7 @@ type spanImpl struct {
 func (s *spanImpl) reset() {
 	s.tracer = nil
 	s.raw = RawSpan{}
-	s.raw.Attributes = nil // TODO(tschottdorf): is clearing out the map better?
+	s.raw.Baggage = nil // TODO(tschottdorf): is clearing out the map better?
 }
 
 func (s *spanImpl) SetOperationName(operationName string) opentracing.Span {
@@ -101,8 +101,8 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	s.tracer.spanPool.Put(s)
 }
 
-func (s *spanImpl) SetTraceAttribute(restrictedKey, val string) opentracing.Span {
-	canonicalKey, valid := opentracing.CanonicalizeTraceAttributeKey(restrictedKey)
+func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {
+	canonicalKey, valid := opentracing.CanonicalizeBaggageKey(restrictedKey)
 	if !valid {
 		panic(fmt.Errorf("Invalid key: %q", restrictedKey))
 	}
@@ -113,15 +113,15 @@ func (s *spanImpl) SetTraceAttribute(restrictedKey, val string) opentracing.Span
 		return s
 	}
 
-	if s.raw.Attributes == nil {
-		s.raw.Attributes = make(map[string]string)
+	if s.raw.Baggage == nil {
+		s.raw.Baggage = make(map[string]string)
 	}
-	s.raw.Attributes[canonicalKey] = val
+	s.raw.Baggage[canonicalKey] = val
 	return s
 }
 
-func (s *spanImpl) TraceAttribute(restrictedKey string) string {
-	canonicalKey, valid := opentracing.CanonicalizeTraceAttributeKey(restrictedKey)
+func (s *spanImpl) BaggageItem(restrictedKey string) string {
+	canonicalKey, valid := opentracing.CanonicalizeBaggageKey(restrictedKey)
 	if !valid {
 		panic(fmt.Errorf("Invalid key: %q", restrictedKey))
 	}
@@ -129,7 +129,7 @@ func (s *spanImpl) TraceAttribute(restrictedKey string) string {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.raw.Attributes[canonicalKey]
+	return s.raw.Baggage[canonicalKey]
 }
 
 func (s *spanImpl) Tracer() opentracing.Tracer {

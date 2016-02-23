@@ -24,35 +24,35 @@ func (c *countingRecorder) RecordSpan(r RawSpan) {
 	atomic.AddInt32((*int32)(c), 1)
 }
 
-func executeOps(sp opentracing.Span, numEvent, numTag, numAttr int) {
+func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
 	for j := 0; j < numEvent; j++ {
 		sp.LogEvent("event")
 	}
 	for j := 0; j < numTag; j++ {
 		sp.SetTag(tags[j], nil)
 	}
-	for j := 0; j < numAttr; j++ {
+	for j := 0; j < numItems; j++ {
 		sp.SetBaggageItem(tags[j], tags[j])
 	}
 }
 
-func benchmarkWithOps(b *testing.B, numEvent, numTag, numAttr int) {
+func benchmarkWithOps(b *testing.B, numEvent, numTag, numItems int) {
 	var r countingRecorder
 	t := New(&r)
 	benchmarkWithOpsAndCB(b, func() opentracing.Span {
 		return t.StartSpan("test")
-	}, numEvent, numTag, numAttr)
+	}, numEvent, numTag, numItems)
 	if int(r) != b.N {
 		b.Fatalf("missing traces: expected %d, got %d", b.N, r)
 	}
 }
 
 func benchmarkWithOpsAndCB(b *testing.B, create func() opentracing.Span,
-	numEvent, numTag, numAttr int) {
+	numEvent, numTag, numItems int) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		sp := create()
-		executeOps(sp, numEvent, numTag, numAttr)
+		executeOps(sp, numEvent, numTag, numItems)
 		sp.Finish()
 	}
 	b.StopTimer()
@@ -98,11 +98,11 @@ func BenchmarkTrimmedSpan_100Events_100Tags_100BaggageItems(b *testing.B) {
 	}
 }
 
-func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numAttr int) {
+func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
 	var r countingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
-	executeOps(sp, 0, 0, numAttr)
+	executeOps(sp, 0, 0, numItems)
 	var carrier interface{}
 	switch format {
 	case opentracing.SplitText:
@@ -124,11 +124,11 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numAttr int
 	}
 }
 
-func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numAttr int) {
+func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
 	var r countingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
-	executeOps(sp, 0, 0, numAttr)
+	executeOps(sp, 0, 0, numItems)
 	var carrier interface{}
 	switch format {
 	case opentracing.SplitText:

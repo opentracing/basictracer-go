@@ -20,7 +20,7 @@ type Options struct {
 	// samples every 64th trace on average.
 	ShouldSample func(int64) bool
 	// TrimUnsampledSpans turns potentially expensive operations on unsampled
-	// Spans into no-ops. More precisely, tags, attributes and log events
+	// Spans into no-ops. More precisely, tags, baggage items, and log events
 	// are silently discarded.
 	TrimUnsampledSpans bool
 	// Recorder receives Spans which have been finished.
@@ -110,10 +110,10 @@ func (t *tracerImpl) StartSpanWithOptions(
 		sp.raw.Sampled = pr.raw.Sampled
 
 		pr.Lock()
-		if l := len(pr.raw.Attributes); l > 0 {
-			sp.raw.Attributes = make(map[string]string, len(pr.raw.Attributes))
-			for k, v := range pr.raw.Attributes {
-				sp.raw.Attributes[k] = v
+		if l := len(pr.raw.Baggage); l > 0 {
+			sp.raw.Baggage = make(map[string]string, len(pr.raw.Baggage))
+			for k, v := range pr.raw.Baggage {
+				sp.raw.Baggage[k] = v
 			}
 		}
 		pr.Unlock()

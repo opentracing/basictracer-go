@@ -114,17 +114,16 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	default:
 		b.Fatalf("unhandled format %d", format)
 	}
-	inj := tracer.Injector(format)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := inj.InjectSpan(sp, carrier)
+		err := tracer.Inject(sp, format, carrier)
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
+func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
 	var r countingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
@@ -140,13 +139,12 @@ func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numItems i
 	default:
 		b.Fatalf("unhandled format %d", format)
 	}
-	if err := tracer.Injector(format).InjectSpan(sp, carrier); err != nil {
+	if err := tracer.Inject(sp, format, carrier); err != nil {
 		b.Fatal(err)
 	}
-	extractor := tracer.Extractor(format)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sp, err := extractor.JoinTrace("benchmark", carrier)
+		sp, err := tracer.Join("benchmark", format, carrier)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -178,26 +176,26 @@ func BenchmarkInject_SplitBinary_100BaggageItems(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitBinary, 100)
 }
 
-func BenchmarkExtract_SplitText_Empty(b *testing.B) {
-	benchmarkExtract(b, opentracing.SplitText, 0)
+func BenchmarkJoin_SplitText_Empty(b *testing.B) {
+	benchmarkJoin(b, opentracing.SplitText, 0)
 }
 
-func BenchmarkExtract_SplitText_100BaggageItems(b *testing.B) {
-	benchmarkExtract(b, opentracing.SplitText, 100)
+func BenchmarkJoin_SplitText_100BaggageItems(b *testing.B) {
+	benchmarkJoin(b, opentracing.SplitText, 100)
 }
 
-func BenchmarkExtract_GoHTTPHeader_Empty(b *testing.B) {
-	benchmarkExtract(b, opentracing.GoHTTPHeader, 0)
+func BenchmarkJoin_GoHTTPHeader_Empty(b *testing.B) {
+	benchmarkJoin(b, opentracing.GoHTTPHeader, 0)
 }
 
-func BenchmarkExtract_GoHTTPHeader_100BaggageItems(b *testing.B) {
-	benchmarkExtract(b, opentracing.GoHTTPHeader, 100)
+func BenchmarkJoin_GoHTTPHeader_100BaggageItems(b *testing.B) {
+	benchmarkJoin(b, opentracing.GoHTTPHeader, 100)
 }
 
-func BenchmarkExtract_SplitBinary_Empty(b *testing.B) {
-	benchmarkExtract(b, opentracing.SplitBinary, 0)
+func BenchmarkJoin_SplitBinary_Empty(b *testing.B) {
+	benchmarkJoin(b, opentracing.SplitBinary, 0)
 }
 
-func BenchmarkExtract_SplitBinary_100BaggageItems(b *testing.B) {
-	benchmarkExtract(b, opentracing.SplitBinary, 100)
+func BenchmarkJoin_SplitBinary_100BaggageItems(b *testing.B) {
+	benchmarkJoin(b, opentracing.SplitBinary, 100)
 }

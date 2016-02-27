@@ -155,32 +155,32 @@ type accessorType struct{}
 // Accessor is the format to use for AccessorCarrier.
 var Accessor accessorType
 
-func (t *tracerImpl) Extractor(format interface{}) opentracing.Extractor {
+func (t *tracerImpl) Inject(toInject opentracing.Span, format interface{}, carrier interface{}) error {
 	switch format {
 	case opentracing.SplitText:
-		return t.textPropagator
+		return t.textPropagator.InjectSpan(toInject, carrier)
 	case opentracing.SplitBinary:
-		return t.binaryPropagator
+		return t.binaryPropagator.InjectSpan(toInject, carrier)
 	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator
+		return t.goHTTPPropagator.InjectSpan(toInject, carrier)
 	}
 	if _, ok := format.(accessorType); ok {
-		return t.accessorPropagator
+		return t.accessorPropagator.Inject(toInject, carrier)
 	}
-	return nil
+	return opentracing.ErrUnsupportedFormat
 }
 
-func (t *tracerImpl) Injector(format interface{}) opentracing.Injector {
+func (t *tracerImpl) Join(operationName string, format interface{}, carrier interface{}) (opentracing.Span, error) {
 	switch format {
 	case opentracing.SplitText:
-		return t.textPropagator
+		return t.textPropagator.JoinTrace(operationName, carrier)
 	case opentracing.SplitBinary:
-		return t.binaryPropagator
+		return t.binaryPropagator.JoinTrace(operationName, carrier)
 	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator
+		return t.goHTTPPropagator.JoinTrace(operationName, carrier)
 	}
 	if _, ok := format.(accessorType); ok {
-		return t.accessorPropagator
+		return t.accessorPropagator.Join(operationName, carrier)
 	}
-	return nil
+	return nil, opentracing.ErrUnsupportedFormat
 }

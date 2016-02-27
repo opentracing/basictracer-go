@@ -49,7 +49,7 @@ func client() {
 
 func server() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		serverSpan, err := opentracing.JoinTraceFromHeader(
+		serverSpan, err := opentracing.JoinFromHeader(
 			"serverSpan", req.Header, opentracing.GlobalTracer())
 		if err != nil {
 			panic(err)

@@ -10,6 +10,12 @@ type accessorPropagator struct {
 	tracer *tracerImpl
 }
 
+const (
+	fieldNameTraceID = "traceid"
+	fieldNameSpanID  = "spanid"
+	fieldNameSampled = "sampled"
+)
+
 // DelegatingCarrier is a flexible carrier interface which can be implemented
 // by types which have a means of storing the trace metadata and already know
 // how to serialize themselves (for example, protocol buffers).
@@ -20,7 +26,7 @@ type DelegatingCarrier interface {
 	GetBaggage(func(key, value string))
 }
 
-func (p *accessorPropagator) InjectSpan(
+func (p *accessorPropagator) Inject(
 	sp opentracing.Span,
 	carrier interface{},
 ) error {
@@ -40,7 +46,7 @@ func (p *accessorPropagator) InjectSpan(
 	return nil
 }
 
-func (p *accessorPropagator) JoinTrace(
+func (p *accessorPropagator) Join(
 	operationName string,
 	carrier interface{},
 ) (opentracing.Span, error) {

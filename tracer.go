@@ -158,11 +158,11 @@ var Accessor accessorType
 func (t *tracerImpl) Inject(toInject opentracing.Span, format interface{}, carrier interface{}) error {
 	switch format {
 	case opentracing.SplitText:
-		return t.textPropagator.InjectSpan(toInject, carrier)
+		return t.textPropagator.Inject(toInject, carrier)
 	case opentracing.SplitBinary:
-		return t.binaryPropagator.InjectSpan(toInject, carrier)
+		return t.binaryPropagator.Inject(toInject, carrier)
 	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator.InjectSpan(toInject, carrier)
+		return t.goHTTPPropagator.Inject(toInject, carrier)
 	}
 	if _, ok := format.(accessorType); ok {
 		return t.accessorPropagator.Inject(toInject, carrier)
@@ -173,11 +173,11 @@ func (t *tracerImpl) Inject(toInject opentracing.Span, format interface{}, carri
 func (t *tracerImpl) Join(operationName string, format interface{}, carrier interface{}) (opentracing.Span, error) {
 	switch format {
 	case opentracing.SplitText:
-		return t.textPropagator.JoinTrace(operationName, carrier)
+		return t.textPropagator.Join(operationName, carrier)
 	case opentracing.SplitBinary:
-		return t.binaryPropagator.JoinTrace(operationName, carrier)
+		return t.binaryPropagator.Join(operationName, carrier)
 	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator.JoinTrace(operationName, carrier)
+		return t.goHTTPPropagator.Join(operationName, carrier)
 	}
 	if _, ok := format.(accessorType); ok {
 		return t.accessorPropagator.Join(operationName, carrier)

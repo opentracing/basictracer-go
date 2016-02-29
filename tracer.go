@@ -155,17 +155,17 @@ type accessorType struct{}
 // Accessor is the format to use for AccessorCarrier.
 var Accessor accessorType
 
-func (t *tracerImpl) Inject(toInject opentracing.Span, format interface{}, carrier interface{}) error {
+func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier interface{}) error {
 	switch format {
 	case opentracing.SplitText:
-		return t.textPropagator.Inject(toInject, carrier)
+		return t.textPropagator.Inject(sp, carrier)
 	case opentracing.SplitBinary:
-		return t.binaryPropagator.Inject(toInject, carrier)
+		return t.binaryPropagator.Inject(sp, carrier)
 	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator.Inject(toInject, carrier)
+		return t.goHTTPPropagator.Inject(sp, carrier)
 	}
 	if _, ok := format.(accessorType); ok {
-		return t.accessorPropagator.Inject(toInject, carrier)
+		return t.accessorPropagator.Inject(sp, carrier)
 	}
 	return opentracing.ErrUnsupportedFormat
 }

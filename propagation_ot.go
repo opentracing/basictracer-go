@@ -29,7 +29,7 @@ const (
 	fieldNameSampled = "sampled"
 )
 
-func (p *splitTextPropagator) InjectSpan(
+func (p *splitTextPropagator) Inject(
 	sp opentracing.Span,
 	carrier interface{},
 ) error {
@@ -59,7 +59,7 @@ func (p *splitTextPropagator) InjectSpan(
 	return nil
 }
 
-func (p *splitTextPropagator) JoinTrace(
+func (p *splitTextPropagator) Join(
 	operationName string,
 	carrier interface{},
 ) (opentracing.Span, error) {
@@ -120,7 +120,7 @@ func (p *splitTextPropagator) JoinTrace(
 	), nil
 }
 
-func (p *splitBinaryPropagator) InjectSpan(
+func (p *splitBinaryPropagator) Inject(
 	sp opentracing.Span,
 	carrier interface{},
 ) error {
@@ -177,7 +177,7 @@ func (p *splitBinaryPropagator) InjectSpan(
 	return nil
 }
 
-func (p *splitBinaryPropagator) JoinTrace(
+func (p *splitBinaryPropagator) Join(
 	operationName string,
 	carrier interface{},
 ) (opentracing.Span, error) {
@@ -261,13 +261,13 @@ const (
 	traceBaggageHeaderName = "Trace-Baggage"
 )
 
-func (p *goHTTPPropagator) InjectSpan(
+func (p *goHTTPPropagator) Inject(
 	sp opentracing.Span,
 	carrier interface{},
 ) error {
 	// Defer to SplitBinary for the real work.
 	splitBinaryCarrier := opentracing.NewSplitBinaryCarrier()
-	if err := p.splitBinaryPropagator.InjectSpan(sp, splitBinaryCarrier); err != nil {
+	if err := p.splitBinaryPropagator.Inject(sp, splitBinaryCarrier); err != nil {
 		return err
 	}
 
@@ -281,7 +281,7 @@ func (p *goHTTPPropagator) InjectSpan(
 	return nil
 }
 
-func (p *goHTTPPropagator) JoinTrace(
+func (p *goHTTPPropagator) Join(
 	operationName string,
 	carrier interface{},
 ) (opentracing.Span, error) {
@@ -309,5 +309,5 @@ func (p *goHTTPPropagator) JoinTrace(
 		TracerState: tracerStateBinary,
 		Baggage:     traceBaggageBinary,
 	}
-	return p.splitBinaryPropagator.JoinTrace(operationName, splitBinaryCarrier)
+	return p.splitBinaryPropagator.Join(operationName, splitBinaryCarrier)
 }

@@ -10,12 +10,6 @@ type accessorPropagator struct {
 	tracer *tracerImpl
 }
 
-const (
-	fieldNameTraceID = "traceid"
-	fieldNameSpanID  = "spanid"
-	fieldNameSampled = "sampled"
-)
-
 // DelegatingCarrier is a flexible carrier interface which can be implemented
 // by types which have a means of storing the trace metadata and already know
 // how to serialize themselves (for example, protocol buffers).

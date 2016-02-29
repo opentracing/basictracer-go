@@ -19,8 +19,22 @@ type spanImpl struct {
 
 func (s *spanImpl) reset() {
 	s.tracer = nil
+	// Note: Would like to do the following, but then the consumer of RawSpan
+	// (the recorder) needs to make sure that they're not holding on to the
+	// baggage or logs when they return (i.e. they need to copy if they care):
+	//
+	// logs, baggage := s.raw.Logs[:0], s.raw.Baggage
+	// for k := range baggage {
+	// 	delete(baggage, k)
+	// }
+	// s.raw.Logs, s.raw.Baggage = logs, baggage
+	//
+	// That's likely too much to ask for. But there is some magic we should
+	// be able to do with `runtime.SetFinalizer` to reclaim that memory into
+	// a buffer pool when GC considers them unreachable, which should ease
+	// some of the load. Hard to say how quickly that would be in practice
+	// though.
 	s.raw = RawSpan{}
-	s.raw.Baggage = nil // TODO(tschottdorf): is clearing out the map better?
 }
 
 func (s *spanImpl) SetOperationName(operationName string) opentracing.Span {

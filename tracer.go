@@ -25,6 +25,10 @@ type Options struct {
 	TrimUnsampledSpans bool
 	// Recorder receives Spans which have been finished.
 	Recorder SpanRecorder
+	// NewSpanEventListener can be used to enhance the tracer by effectively
+	// attaching external code to trace events. See NetTraceIntegrator for a
+	// practical example, and event.go for the list of possible events.
+	NewSpanEventListener func() func(SpanEvent)
 }
 
 // DefaultOptions returns an Options object with a 1 in 64 sampling rate and
@@ -33,6 +37,7 @@ type Options struct {
 func DefaultOptions() Options {
 	var opts Options
 	opts.ShouldSample = func(traceID int64) bool { return traceID%64 == 0 }
+	opts.NewSpanEventListener = func() func(SpanEvent) { return nil }
 	return opts
 }
 
@@ -136,10 +141,12 @@ func (t *tracerImpl) startSpanInternal(
 	tags opentracing.Tags,
 ) opentracing.Span {
 	sp.tracer = t
+	sp.event = t.NewSpanEventListener()
 	sp.raw.Operation = operationName
 	sp.raw.Start = startTime
 	sp.raw.Duration = -1
 	sp.raw.Tags = tags
+	defer sp.onCreate(operationName)
 	return sp
 }
 

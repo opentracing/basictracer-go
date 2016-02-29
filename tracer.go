@@ -47,6 +47,7 @@ func NewWithOptions(opts Options) opentracing.Tracer {
 	rval.textPropagator = &splitTextPropagator{rval}
 	rval.binaryPropagator = &splitBinaryPropagator{rval}
 	rval.goHTTPPropagator = &goHTTPPropagator{rval.binaryPropagator}
+	rval.accessorPropagator = &accessorPropagator{rval}
 	return rval
 }
 
@@ -63,10 +64,11 @@ func New(recorder SpanRecorder) opentracing.Tracer {
 // Implements the `Tracer` interface.
 type tracerImpl struct {
 	Options
-	spanPool         sync.Pool
-	textPropagator   *splitTextPropagator
-	binaryPropagator *splitBinaryPropagator
-	goHTTPPropagator *goHTTPPropagator
+	spanPool           sync.Pool
+	textPropagator     *splitTextPropagator
+	binaryPropagator   *splitBinaryPropagator
+	goHTTPPropagator   *goHTTPPropagator
+	accessorPropagator *accessorPropagator
 }
 
 func (t *tracerImpl) StartSpan(
@@ -141,6 +143,11 @@ func (t *tracerImpl) startSpanInternal(
 	return sp
 }
 
+type accessorType struct{}
+
+// Accessor is the format to use for AccessorCarrier.
+var Accessor accessorType
+
 func (t *tracerImpl) Extractor(format interface{}) opentracing.Extractor {
 	switch format {
 	case opentracing.SplitText:
@@ -149,6 +156,9 @@ func (t *tracerImpl) Extractor(format interface{}) opentracing.Extractor {
 		return t.binaryPropagator
 	case opentracing.GoHTTPHeader:
 		return t.goHTTPPropagator
+	}
+	if _, ok := format.(accessorType); ok {
+		return t.accessorPropagator
 	}
 	return nil
 }
@@ -161,6 +171,9 @@ func (t *tracerImpl) Injector(format interface{}) opentracing.Injector {
 		return t.binaryPropagator
 	case opentracing.GoHTTPHeader:
 		return t.goHTTPPropagator
+	}
+	if _, ok := format.(accessorType); ok {
+		return t.accessorPropagator
 	}
 	return nil
 }

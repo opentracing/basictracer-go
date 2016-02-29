@@ -55,14 +55,10 @@ func TestSpanPropagator(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		inj := tracer.Injector(test.typ)
-		if inj == nil {
-			t.Fatalf("%d: no injector found for %T", i, test.carrier)
-		}
-		if err := inj.InjectSpan(sp, test.carrier); err != nil {
+		if err := tracer.Inject(sp, test.typ, test.carrier); err != nil {
 			t.Fatalf("%d: %v", i, err)
 		}
-		child, err := tracer.Extractor(test.typ).JoinTrace(op, test.carrier)
+		child, err := tracer.Join(op, test.typ, test.carrier)
 		if err != nil {
 			t.Fatalf("%d: %v", i, err)
 		}

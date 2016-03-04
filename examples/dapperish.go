@@ -18,8 +18,8 @@ import (
 func client() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		ctx, span := opentracing.BackgroundContextWithSpan(
-			opentracing.StartSpan("getInput"))
+		span := opentracing.StartSpan("getInput")
+		ctx := opentracing.BackgroundContextWithSpan(span)
 		// Make sure that global baggage propagation works.
 		span.SetBaggageItem("User", os.Getenv("USER"))
 		span.LogEventWithPayload("ctx", ctx)

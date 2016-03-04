@@ -24,9 +24,13 @@ type goHTTPPropagator struct {
 }
 
 const (
-	fieldNameTraceID = "traceid"
-	fieldNameSpanID  = "spanid"
-	fieldNameSampled = "sampled"
+	prefixTracerState = "ot-tracer-"
+	prefixBaggage     = "ot-baggage-"
+
+	tracerStateFieldCount = 3
+	fieldNameTraceID      = prefixTracerState + "traceid"
+	fieldNameSpanID       = prefixTracerState + "spanid"
+	fieldNameSampled      = prefixTracerState + "sampled"
 )
 
 func (p *splitTextPropagator) Inject(
@@ -42,10 +46,10 @@ func (p *splitTextPropagator) Inject(
 		return opentracing.ErrInvalidCarrier
 	}
 	if splitTextCarrier.TracerState == nil {
-		splitTextCarrier.TracerState = make(map[string]string, 3 /* see below */)
+		splitTextCarrier.TracerState = make(map[string]string, tracerStateFieldCount)
 	}
-	splitTextCarrier.TracerState[fieldNameTraceID] = strconv.FormatInt(sc.raw.TraceID, 10)
-	splitTextCarrier.TracerState[fieldNameSpanID] = strconv.FormatInt(sc.raw.SpanID, 10)
+	splitTextCarrier.TracerState[fieldNameTraceID] = strconv.FormatInt(sc.raw.TraceID, 16)
+	splitTextCarrier.TracerState[fieldNameSpanID] = strconv.FormatInt(sc.raw.SpanID, 16)
 	splitTextCarrier.TracerState[fieldNameSampled] = strconv.FormatBool(sc.raw.Sampled)
 
 	sc.Lock()
@@ -53,7 +57,7 @@ func (p *splitTextPropagator) Inject(
 		splitTextCarrier.Baggage = make(map[string]string, l)
 	}
 	for k, v := range sc.raw.Baggage {
-		splitTextCarrier.Baggage[k] = v
+		splitTextCarrier.Baggage[prefixBaggage+k] = v
 	}
 	sc.Unlock()
 	return nil
@@ -74,12 +78,12 @@ func (p *splitTextPropagator) Join(
 	for k, v := range splitTextCarrier.TracerState {
 		switch strings.ToLower(k) {
 		case fieldNameTraceID:
-			traceID, err = strconv.ParseInt(v, 10, 64)
+			traceID, err = strconv.ParseInt(v, 16, 64)
 			if err != nil {
 				return nil, opentracing.ErrTraceCorrupted
 			}
 		case fieldNameSpanID:
-			propagatedSpanID, err = strconv.ParseInt(v, 10, 64)
+			propagatedSpanID, err = strconv.ParseInt(v, 16, 64)
 			if err != nil {
 				return nil, opentracing.ErrTraceCorrupted
 			}
@@ -93,8 +97,17 @@ func (p *splitTextPropagator) Join(
 		}
 		requiredFieldCount++
 	}
-	const expFieldCount = 3
-	if requiredFieldCount < expFieldCount {
+	var decodedBaggage map[string]string
+	if splitTextCarrier.Baggage != nil {
+		decodedBaggage = make(map[string]string)
+		for k, v := range splitTextCarrier.Baggage {
+			lowercaseK := strings.ToLower(k)
+			if strings.HasPrefix(lowercaseK, prefixBaggage) {
+				decodedBaggage[strings.TrimPrefix(lowercaseK, prefixBaggage)] = v
+			}
+		}
+	}
+	if requiredFieldCount < tracerStateFieldCount {
 		if len(splitTextCarrier.TracerState) == 0 {
 			return nil, opentracing.ErrTraceNotFound
 		}
@@ -109,8 +122,8 @@ func (p *splitTextPropagator) Join(
 			ParentSpanID: propagatedSpanID,
 			Sampled:      sampled,
 		},
+		Baggage: decodedBaggage,
 	}
-	sp.raw.Baggage = splitTextCarrier.Baggage
 
 	return p.tracer.startSpanInternal(
 		sp,

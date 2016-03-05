@@ -116,6 +116,11 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 
 	s.onFinish(s.raw)
 	s.tracer.Recorder.RecordSpan(s.raw)
+	if s.tracer.Options.DebugAssertUseAfterFinish {
+		// This makes it much more likely to catch a panic on any subsequent
+		// operation since s.tracer is accessed on every call to `Lock`.
+		s.reset()
+	}
 	s.tracer.spanPool.Put(s)
 }
 

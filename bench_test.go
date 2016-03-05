@@ -3,7 +3,6 @@ package basictracer
 import (
 	"fmt"
 	"net/http"
-	"sync/atomic"
 	"testing"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -16,12 +15,6 @@ func init() {
 	for j := 0; j < len(tags); j++ {
 		tags[j] = fmt.Sprintf("%d", randomID())
 	}
-}
-
-type countingRecorder int32
-
-func (c *countingRecorder) RecordSpan(r RawSpan) {
-	atomic.AddInt32((*int32)(c), 1)
 }
 
 func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
@@ -37,7 +30,7 @@ func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
 }
 
 func benchmarkWithOps(b *testing.B, numEvent, numTag, numItems int) {
-	var r countingRecorder
+	var r CountingRecorder
 	t := New(&r)
 	benchmarkWithOpsAndCB(b, func() opentracing.Span {
 		return t.StartSpan("test")
@@ -83,7 +76,7 @@ func BenchmarkSpan_100BaggageItems(b *testing.B) {
 }
 
 func BenchmarkTrimmedSpan_100Events_100Tags_100BaggageItems(b *testing.B) {
-	var r countingRecorder
+	var r CountingRecorder
 	opts := DefaultOptions()
 	opts.TrimUnsampledSpans = true
 	opts.ShouldSample = func(_ int64) bool { return false }
@@ -99,7 +92,7 @@ func BenchmarkTrimmedSpan_100Events_100Tags_100BaggageItems(b *testing.B) {
 }
 
 func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
-	var r countingRecorder
+	var r CountingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
 	executeOps(sp, 0, 0, numItems)
@@ -124,7 +117,7 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 }
 
 func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
-	var r countingRecorder
+	var r CountingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
 	executeOps(sp, 0, 0, numItems)

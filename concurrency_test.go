@@ -8,7 +8,7 @@ import (
 
 const op = "test"
 
-func TestGoroutineDetection(t *testing.T) {
+func TestDebugAssertSingleGoroutine(t *testing.T) {
 	opts := DefaultOptions()
 	opts.Recorder = NewInMemoryRecorder()
 	opts.DebugAssertSingleGoroutine = true
@@ -29,6 +29,27 @@ func TestGoroutineDetection(t *testing.T) {
 	<-wait
 	if !panicked {
 		t.Fatal("expected a panic")
+	}
+}
+
+func TestDebugAssertUseAfterFinish(t *testing.T) {
+	opts := DefaultOptions()
+	opts.Recorder = NewInMemoryRecorder()
+	opts.DebugAssertUseAfterFinish = true
+	tracer := NewWithOptions(opts)
+	for _, double := range []bool{false, true} {
+		sp := tracer.StartSpan(op)
+		if double {
+			sp.Finish()
+		}
+		var panicked bool
+		func() {
+			defer func() { panicked = recover() != nil }()
+			sp.Finish()
+		}()
+		if panicked != double {
+			t.Errorf("finished double = %t, but panicked = %t", double, panicked)
+		}
 	}
 }
 

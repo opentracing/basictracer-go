@@ -119,9 +119,13 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	if s.tracer.Options.DebugAssertUseAfterFinish {
 		// This makes it much more likely to catch a panic on any subsequent
 		// operation since s.tracer is accessed on every call to `Lock`.
+		pool := s.tracer.spanPool
 		s.reset()
+		pool.Put(s)
+	} else {
+		s.tracer.spanPool.Put(s)
 	}
-	s.tracer.spanPool.Put(s)
+
 }
 
 func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {

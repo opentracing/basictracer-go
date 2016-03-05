@@ -8,7 +8,6 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	basictracer "github.com/opentracing/basictracer-go"
-	"github.com/opentracing/basictracer-go/testutils"
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
@@ -39,7 +38,7 @@ func (vc *verbatimCarrier) State() (traceID, spanID int64, sampled bool) {
 
 func TestSpanPropagator(t *testing.T) {
 	const op = "test"
-	recorder := testutils.NewInMemoryRecorder()
+	recorder := basictracer.NewInMemoryRecorder()
 	tracer := basictracer.New(recorder)
 
 	sp := tracer.StartSpan(op)

@@ -47,7 +47,7 @@ func TestSpanPropagator(t *testing.T) {
 	tests := []struct {
 		typ, carrier interface{}
 	}{
-		{basictracer.Accessor, basictracer.DelegatingCarrier(&verbatimCarrier{b: map[string]string{}})},
+		{basictracer.Delegator, basictracer.DelegatingCarrier(&verbatimCarrier{b: map[string]string{}})},
 		{opentracing.SplitBinary, opentracing.NewSplitBinaryCarrier()},
 		{opentracing.SplitText, opentracing.NewSplitTextCarrier()},
 		{opentracing.GoHTTPHeader, http.Header{}},

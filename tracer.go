@@ -21,7 +21,8 @@ type Options struct {
 	ShouldSample func(int64) bool
 	// TrimUnsampledSpans turns potentially expensive operations on unsampled
 	// Spans into no-ops. More precisely, tags, baggage items, and log events
-	// are silently discarded.
+	// are silently discarded. If NewSpanEventListener is set, the callbacks
+	// will still fire in that case.
 	TrimUnsampledSpans bool
 	// Recorder receives Spans which have been finished.
 	Recorder SpanRecorder
@@ -188,10 +189,10 @@ func (t *tracerImpl) startSpanInternal(
 	return sp
 }
 
-type accessorType struct{}
+type delegatorType struct{}
 
-// Accessor is the format to use for AccessorCarrier.
-var Accessor accessorType
+// Delegator is the format to use for DelegatingCarrier.
+var Delegator delegatorType
 
 func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier interface{}) error {
 	switch format {
@@ -202,7 +203,7 @@ func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier int
 	case opentracing.GoHTTPHeader:
 		return t.goHTTPPropagator.Inject(sp, carrier)
 	}
-	if _, ok := format.(accessorType); ok {
+	if _, ok := format.(delegatorType); ok {
 		return t.accessorPropagator.Inject(sp, carrier)
 	}
 	return opentracing.ErrUnsupportedFormat
@@ -217,7 +218,7 @@ func (t *tracerImpl) Join(operationName string, format interface{}, carrier inte
 	case opentracing.GoHTTPHeader:
 		return t.goHTTPPropagator.Join(operationName, carrier)
 	}
-	if _, ok := format.(accessorType); ok {
+	if _, ok := format.(delegatorType); ok {
 		return t.accessorPropagator.Join(operationName, carrier)
 	}
 	return nil, opentracing.ErrUnsupportedFormat

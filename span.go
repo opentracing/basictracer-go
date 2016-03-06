@@ -136,6 +136,7 @@ func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {
 
 	s.Lock()
 	defer s.Unlock()
+	s.onBaggage(canonicalKey, val)
 	if s.trim() {
 		return s
 	}
@@ -144,7 +145,6 @@ func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {
 		s.raw.Baggage = make(map[string]string)
 	}
 	s.raw.Baggage[canonicalKey] = val
-	s.onBaggage(canonicalKey, val)
 	return s
 }
 

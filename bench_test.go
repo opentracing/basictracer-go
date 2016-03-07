@@ -149,7 +149,7 @@ func BenchmarkInject_SplitText_Empty(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitText, 0)
 }
 
-func BenchmarkInject_SplitText_100BaggaeItems(b *testing.B) {
+func BenchmarkInject_SplitText_100BaggageItems(b *testing.B) {
 	benchmarkInject(b, opentracing.SplitText, 100)
 }
 

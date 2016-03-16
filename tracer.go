@@ -79,9 +79,9 @@ func DefaultOptions() Options {
 // NewWithOptions creates a customized Tracer.
 func NewWithOptions(opts Options) opentracing.Tracer {
 	rval := &tracerImpl{Options: opts}
-	rval.textPropagator = &splitTextPropagator{rval}
-	rval.binaryPropagator = &splitBinaryPropagator{rval}
-	rval.goHTTPPropagator = &goHTTPPropagator{rval.binaryPropagator}
+	rval.textPropagator = &textMapPropagator{rval}
+	rval.binaryPropagator = &binaryPropagator{rval}
+	rval.goHTTPPropagator = &goHTTPPropagator{rval.textPropagator}
 	rval.accessorPropagator = &accessorPropagator{rval}
 	return rval
 }
@@ -99,8 +99,8 @@ func New(recorder SpanRecorder) opentracing.Tracer {
 // Implements the `Tracer` interface.
 type tracerImpl struct {
 	Options
-	textPropagator     *splitTextPropagator
-	binaryPropagator   *splitBinaryPropagator
+	textPropagator     *textMapPropagator
+	binaryPropagator   *binaryPropagator
 	goHTTPPropagator   *goHTTPPropagator
 	accessorPropagator *accessorPropagator
 }
@@ -189,9 +189,9 @@ var Delegator delegatorType
 
 func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier interface{}) error {
 	switch format {
-	case opentracing.SplitText:
+	case opentracing.TextMap:
 		return t.textPropagator.Inject(sp, carrier)
-	case opentracing.SplitBinary:
+	case opentracing.Binary:
 		return t.binaryPropagator.Inject(sp, carrier)
 	case opentracing.GoHTTPHeader:
 		return t.goHTTPPropagator.Inject(sp, carrier)
@@ -204,9 +204,9 @@ func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier int
 
 func (t *tracerImpl) Join(operationName string, format interface{}, carrier interface{}) (opentracing.Span, error) {
 	switch format {
-	case opentracing.SplitText:
+	case opentracing.TextMap:
 		return t.textPropagator.Join(operationName, carrier)
-	case opentracing.SplitBinary:
+	case opentracing.Binary:
 		return t.binaryPropagator.Join(operationName, carrier)
 	case opentracing.GoHTTPHeader:
 		return t.goHTTPPropagator.Join(operationName, carrier)

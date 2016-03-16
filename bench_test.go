@@ -98,10 +98,10 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	executeOps(sp, 0, 0, numItems)
 	var carrier interface{}
 	switch format {
-	case opentracing.SplitText:
-		carrier = opentracing.NewSplitTextCarrier()
-	case opentracing.SplitBinary:
-		carrier = opentracing.NewSplitBinaryCarrier()
+	case opentracing.TextMap:
+		carrier = opentracing.TextMapCarrier{}
+	case opentracing.Binary:
+		carrier = opentracing.BinaryCarrier(&[]byte{})
 	case opentracing.GoHTTPHeader:
 		carrier = http.Header{}
 	default:
@@ -123,10 +123,10 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 	executeOps(sp, 0, 0, numItems)
 	var carrier interface{}
 	switch format {
-	case opentracing.SplitText:
-		carrier = opentracing.NewSplitTextCarrier()
-	case opentracing.SplitBinary:
-		carrier = opentracing.NewSplitBinaryCarrier()
+	case opentracing.TextMap:
+		carrier = opentracing.TextMapCarrier{}
+	case opentracing.Binary:
+		carrier = opentracing.BinaryCarrier(&[]byte{})
 	case opentracing.GoHTTPHeader:
 		carrier = http.Header{}
 	default:
@@ -145,12 +145,12 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 	}
 }
 
-func BenchmarkInject_SplitText_Empty(b *testing.B) {
-	benchmarkInject(b, opentracing.SplitText, 0)
+func BenchmarkInject_TextMap_Empty(b *testing.B) {
+	benchmarkInject(b, opentracing.TextMap, 0)
 }
 
-func BenchmarkInject_SplitText_100BaggageItems(b *testing.B) {
-	benchmarkInject(b, opentracing.SplitText, 100)
+func BenchmarkInject_TextMap_100BaggageItems(b *testing.B) {
+	benchmarkInject(b, opentracing.TextMap, 100)
 }
 
 func BenchmarkInject_GoHTTPHeader_Empty(b *testing.B) {
@@ -161,20 +161,20 @@ func BenchmarkInject_GoHTTPHeader_100BaggageItems(b *testing.B) {
 	benchmarkInject(b, opentracing.GoHTTPHeader, 100)
 }
 
-func BenchmarkInject_SplitBinary_Empty(b *testing.B) {
-	benchmarkInject(b, opentracing.SplitBinary, 0)
+func BenchmarkInject_Binary_Empty(b *testing.B) {
+	benchmarkInject(b, opentracing.Binary, 0)
 }
 
-func BenchmarkInject_SplitBinary_100BaggageItems(b *testing.B) {
-	benchmarkInject(b, opentracing.SplitBinary, 100)
+func BenchmarkInject_Binary_100BaggageItems(b *testing.B) {
+	benchmarkInject(b, opentracing.Binary, 100)
 }
 
-func BenchmarkJoin_SplitText_Empty(b *testing.B) {
-	benchmarkJoin(b, opentracing.SplitText, 0)
+func BenchmarkJoin_TextMap_Empty(b *testing.B) {
+	benchmarkJoin(b, opentracing.TextMap, 0)
 }
 
-func BenchmarkJoin_SplitText_100BaggageItems(b *testing.B) {
-	benchmarkJoin(b, opentracing.SplitText, 100)
+func BenchmarkJoin_TextMap_100BaggageItems(b *testing.B) {
+	benchmarkJoin(b, opentracing.TextMap, 100)
 }
 
 func BenchmarkJoin_GoHTTPHeader_Empty(b *testing.B) {
@@ -185,10 +185,10 @@ func BenchmarkJoin_GoHTTPHeader_100BaggageItems(b *testing.B) {
 	benchmarkJoin(b, opentracing.GoHTTPHeader, 100)
 }
 
-func BenchmarkJoin_SplitBinary_Empty(b *testing.B) {
-	benchmarkJoin(b, opentracing.SplitBinary, 0)
+func BenchmarkJoin_Binary_Empty(b *testing.B) {
+	benchmarkJoin(b, opentracing.Binary, 0)
 }
 
-func BenchmarkJoin_SplitBinary_100BaggageItems(b *testing.B) {
-	benchmarkJoin(b, opentracing.SplitBinary, 100)
+func BenchmarkJoin_Binary_100BaggageItems(b *testing.B) {
+	benchmarkJoin(b, opentracing.Binary, 100)
 }

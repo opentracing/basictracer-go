@@ -1,6 +1,7 @@
 package basictracer_test
 
 import (
+	"bytes"
 	"net/http"
 	"reflect"
 	"testing"
@@ -48,8 +49,8 @@ func TestSpanPropagator(t *testing.T) {
 		typ, carrier interface{}
 	}{
 		{basictracer.Delegator, basictracer.DelegatingCarrier(&verbatimCarrier{b: map[string]string{}})},
-		{opentracing.Binary, opentracing.BinaryCarrier(&[]byte{})},
-		{opentracing.TextMap, opentracing.TextMapCarrier{}},
+		{opentracing.Binary, opentracing.BinaryCarrier(&bytes.Buffer{})},
+		{opentracing.TextMap, opentracing.HTTPHeaderTextMapCarrier{http.Header{}}},
 		{opentracing.GoHTTPHeader, http.Header{}},
 	}
 

@@ -1,6 +1,7 @@
 package basictracer
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"testing"
@@ -99,9 +100,9 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	var carrier interface{}
 	switch format {
 	case opentracing.TextMap:
-		carrier = opentracing.TextMapCarrier{}
+		carrier = opentracing.HTTPHeaderTextMapCarrier{}
 	case opentracing.Binary:
-		carrier = opentracing.BinaryCarrier(&[]byte{})
+		carrier = opentracing.BinaryCarrier(&bytes.Buffer{})
 	case opentracing.GoHTTPHeader:
 		carrier = http.Header{}
 	default:
@@ -124,9 +125,9 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 	var carrier interface{}
 	switch format {
 	case opentracing.TextMap:
-		carrier = opentracing.TextMapCarrier{}
+		carrier = opentracing.HTTPHeaderTextMapCarrier{}
 	case opentracing.Binary:
-		carrier = opentracing.BinaryCarrier(&[]byte{})
+		carrier = opentracing.BinaryCarrier(&bytes.Buffer{})
 	case opentracing.GoHTTPHeader:
 		carrier = http.Header{}
 	default:

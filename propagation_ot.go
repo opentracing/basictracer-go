@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -45,13 +44,13 @@ func (p *textMapPropagator) Inject(
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
-	carrier[fieldNameTraceID] = strconv.FormatInt(sc.raw.TraceID, 16)
-	carrier[fieldNameSpanID] = strconv.FormatInt(sc.raw.SpanID, 16)
-	carrier[fieldNameSampled] = strconv.FormatBool(sc.raw.Sampled)
+	carrier.Add(fieldNameTraceID, strconv.FormatInt(sc.raw.TraceID, 16))
+	carrier.Add(fieldNameSpanID, strconv.FormatInt(sc.raw.SpanID, 16))
+	carrier.Add(fieldNameSampled, strconv.FormatBool(sc.raw.Sampled))
 
 	sc.Lock()
 	for k, v := range sc.raw.Baggage {
-		carrier[prefixBaggage+k] = v
+		carrier.Add(prefixBaggage+k, v)
 	}
 	sc.Unlock()
 	return nil
@@ -70,22 +69,22 @@ func (p *textMapPropagator) Join(
 	var sampled bool
 	var err error
 	decodedBaggage := make(map[string]string)
-	for k, v := range carrier {
+	err = carrier.GetAll(func(k, v string) error {
 		switch strings.ToLower(k) {
 		case fieldNameTraceID:
 			traceID, err = strconv.ParseInt(v, 16, 64)
 			if err != nil {
-				return nil, opentracing.ErrTraceCorrupted
+				return opentracing.ErrTraceCorrupted
 			}
 		case fieldNameSpanID:
 			propagatedSpanID, err = strconv.ParseInt(v, 16, 64)
 			if err != nil {
-				return nil, opentracing.ErrTraceCorrupted
+				return opentracing.ErrTraceCorrupted
 			}
 		case fieldNameSampled:
 			sampled, err = strconv.ParseBool(v)
 			if err != nil {
-				return nil, opentracing.ErrTraceCorrupted
+				return opentracing.ErrTraceCorrupted
 			}
 		default:
 			lowercaseK := strings.ToLower(k)
@@ -96,6 +95,10 @@ func (p *textMapPropagator) Join(
 			requiredFieldCount--
 		}
 		requiredFieldCount++
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	if requiredFieldCount < tracerStateFieldCount {
 		if requiredFieldCount == 0 {
@@ -135,7 +138,6 @@ func (p *binaryPropagator) Inject(
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
-	buffer := &bytes.Buffer{}
 	var err error
 	var sampledByte byte
 	if sc.raw.Sampled {
@@ -143,43 +145,42 @@ func (p *binaryPropagator) Inject(
 	}
 
 	// Handle the trace and span ids, and sampled status.
-	err = binary.Write(buffer, binary.BigEndian, sc.raw.TraceID)
+	err = binary.Write(carrier, binary.BigEndian, sc.raw.TraceID)
 	if err != nil {
 		return err
 	}
 
-	err = binary.Write(buffer, binary.BigEndian, sc.raw.SpanID)
+	err = binary.Write(carrier, binary.BigEndian, sc.raw.SpanID)
 	if err != nil {
 		return err
 	}
 
-	err = binary.Write(buffer, binary.BigEndian, sampledByte)
+	err = binary.Write(carrier, binary.BigEndian, sampledByte)
 	if err != nil {
 		return err
 	}
 
 	// Handle the baggage.
-	err = binary.Write(buffer, binary.BigEndian, int32(len(sc.raw.Baggage)))
+	err = binary.Write(carrier, binary.BigEndian, int32(len(sc.raw.Baggage)))
 	if err != nil {
 		return err
 	}
-	for k, v := range sc.raw.Baggage {
-		if err = binary.Write(buffer, binary.BigEndian, int32(len(k))); err != nil {
+	for key, val := range sc.raw.Baggage {
+		if err = binary.Write(carrier, binary.BigEndian, int32(len(key))); err != nil {
 			return err
 		}
-		buffer.WriteString(k)
-		if err = binary.Write(buffer, binary.BigEndian, int32(len(v))); err != nil {
+		if _, err = io.WriteString(carrier, key); err != nil {
 			return err
 		}
-		buffer.WriteString(v)
+
+		if err = binary.Write(carrier, binary.BigEndian, int32(len(val))); err != nil {
+			return err
+		}
+		if _, err = io.WriteString(carrier, val); err != nil {
+			return err
+		}
 	}
 
-	// Write out to the carrier.
-	if carrier == nil {
-		// Allocate if needed.
-		carrier = &([]byte{})
-	}
-	*carrier = buffer.Bytes()
 	return nil
 }
 
@@ -191,27 +192,23 @@ func (p *binaryPropagator) Join(
 	if !ok {
 		return nil, opentracing.ErrInvalidCarrier
 	}
-	if len(*carrier) == 0 {
-		return nil, opentracing.ErrTraceNotFound
-	}
 	// Handle the trace, span ids, and sampled status.
-	reader := bytes.NewReader(*carrier)
 	var traceID, propagatedSpanID int64
 	var sampledByte byte
 
-	if err := binary.Read(reader, binary.BigEndian, &traceID); err != nil {
+	if err := binary.Read(carrier, binary.BigEndian, &traceID); err != nil {
 		return nil, opentracing.ErrTraceCorrupted
 	}
-	if err := binary.Read(reader, binary.BigEndian, &propagatedSpanID); err != nil {
+	if err := binary.Read(carrier, binary.BigEndian, &propagatedSpanID); err != nil {
 		return nil, opentracing.ErrTraceCorrupted
 	}
-	if err := binary.Read(reader, binary.BigEndian, &sampledByte); err != nil {
+	if err := binary.Read(carrier, binary.BigEndian, &sampledByte); err != nil {
 		return nil, opentracing.ErrTraceCorrupted
 	}
 
 	// Handle the baggage.
 	var numBaggage int32
-	if err := binary.Read(reader, binary.BigEndian, &numBaggage); err != nil {
+	if err := binary.Read(carrier, binary.BigEndian, &numBaggage); err != nil {
 		return nil, opentracing.ErrTraceCorrupted
 	}
 	iNumBaggage := int(numBaggage)
@@ -221,20 +218,20 @@ func (p *binaryPropagator) Join(
 		baggageMap = make(map[string]string, iNumBaggage)
 		var keyLen, valLen int32
 		for i := 0; i < iNumBaggage; i++ {
-			if err := binary.Read(reader, binary.BigEndian, &keyLen); err != nil {
+			if err := binary.Read(carrier, binary.BigEndian, &keyLen); err != nil {
 				return nil, opentracing.ErrTraceCorrupted
 			}
 			buf.Grow(int(keyLen))
-			if n, err := io.CopyN(&buf, reader, int64(keyLen)); err != nil || int32(n) != keyLen {
+			if n, err := io.CopyN(&buf, carrier, int64(keyLen)); err != nil || int32(n) != keyLen {
 				return nil, opentracing.ErrTraceCorrupted
 			}
 			key := buf.String()
 			buf.Reset()
 
-			if err := binary.Read(reader, binary.BigEndian, &valLen); err != nil {
+			if err := binary.Read(carrier, binary.BigEndian, &valLen); err != nil {
 				return nil, opentracing.ErrTraceCorrupted
 			}
-			if n, err := io.CopyN(&buf, reader, int64(valLen)); err != nil || int32(n) != valLen {
+			if n, err := io.CopyN(&buf, carrier, int64(valLen)); err != nil || int32(n) != valLen {
 				return nil, opentracing.ErrTraceCorrupted
 			}
 			baggageMap[key] = buf.String()
@@ -271,15 +268,10 @@ func (p *goHTTPPropagator) Inject(
 	}
 
 	// Defer to TextMapCarrier for the real work.
-	textMapCarrier := opentracing.TextMapCarrier{}
+	textMapCarrier := opentracing.HTTPHeaderTextMapCarrier{headerCarrier}
 	if err := p.textMapPropagator.Inject(sp, textMapCarrier); err != nil {
 		return err
 	}
-	// Encode as URL-escaped HTTP header vals.
-	for headerKey, headerVal := range textMapCarrier {
-		headerCarrier.Add(headerKey, url.QueryEscape(headerVal))
-	}
-
 	return nil
 }
 
@@ -293,15 +285,7 @@ func (p *goHTTPPropagator) Join(
 	}
 
 	// Build a TextMapCarrier from the string->[]string http.Header map.
-	textCarrier := make(opentracing.TextMapCarrier, len(headerCarrier))
-	for k, vals := range headerCarrier {
-		// We don't know what to do with anything beyond slice item v[0]:
-		unescaped, err := url.QueryUnescape(vals[0])
-		if err != nil {
-			continue
-		}
-		textCarrier[k] = unescaped
-	}
+	textMapCarrier := opentracing.HTTPHeaderTextMapCarrier{headerCarrier}
 	// Defer to textMapCarrier for the rest of the work.
-	return p.textMapPropagator.Join(operationName, textCarrier)
+	return p.textMapPropagator.Join(operationName, textMapCarrier)
 }

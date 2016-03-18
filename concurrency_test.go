@@ -1,6 +1,7 @@
 package basictracer
 
 import (
+	"sync"
 	"testing"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -44,7 +45,17 @@ func TestDebugAssertUseAfterFinish(t *testing.T) {
 		}
 		var panicked bool
 		func() {
-			defer func() { panicked = recover() != nil }()
+			defer func() {
+				r := recover()
+				_, panicked = r.(*errAssertionFailed)
+				if !panicked && r != nil {
+					panic(r)
+				}
+				spImpl := sp.(*spanImpl)
+				// The panic should leave the Mutex unlocked.
+				spImpl.Mutex.Lock()
+				spImpl.Mutex.Unlock()
+			}()
 			sp.Finish()
 		}()
 		if panicked != double {
@@ -59,9 +70,13 @@ func TestConcurrentUsage(t *testing.T) {
 	opts.Recorder = &cr
 	opts.DebugAssertSingleGoroutine = true
 	tracer := NewWithOptions(opts)
-	for i := 0; i < 100; i++ {
+	var wg sync.WaitGroup
+	const num = 100
+	wg.Add(num)
+	for i := 0; i < num; i++ {
 		go func() {
-			for j := 0; j < 100; j++ {
+			defer wg.Done()
+			for j := 0; j < num; j++ {
 				sp := tracer.StartSpan(op)
 				sp.LogEvent("test event")
 				sp.SetTag("foo", "bar")
@@ -75,4 +90,5 @@ func TestConcurrentUsage(t *testing.T) {
 			}
 		}()
 	}
+	wg.Wait()
 }

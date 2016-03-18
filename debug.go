@@ -16,10 +16,16 @@ type errAssertionFailed struct {
 
 func (s *spanImpl) Lock() {
 	s.Mutex.Lock()
-	s.maybeAssertLocked()
+	s.maybeAssertSanityLocked()
 }
 
-func (s *spanImpl) maybeAssertLocked() {
+func (s *spanImpl) maybeAssertSanityLocked() {
+	if s.tracer == nil {
+		s.Mutex.Unlock()
+		panic(&errAssertionFailed{
+			msg: fmt.Sprintf("span used after Finish()"),
+		})
+	}
 	if s.tracer.Options.DebugAssertSingleGoroutine {
 		startID := curGoroutineID()
 		curID, ok := s.raw.Tags[debugGoroutineIDTag].(uint64)
@@ -29,6 +35,7 @@ func (s *spanImpl) maybeAssertLocked() {
 			return
 		}
 		if startID != curID {
+			s.Mutex.Unlock()
 			panic(&errAssertionFailed{
 				msg: fmt.Sprintf("span started on goroutine %d, but now running on %d", startID, curID),
 			})

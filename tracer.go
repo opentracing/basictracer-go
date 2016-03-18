@@ -1,7 +1,6 @@
 package basictracer
 
 import (
-	"sync"
 	"time"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -79,12 +78,7 @@ func DefaultOptions() Options {
 
 // NewWithOptions creates a customized Tracer.
 func NewWithOptions(opts Options) opentracing.Tracer {
-	rval := &tracerImpl{
-		Options: opts,
-		spanPool: sync.Pool{New: func() interface{} {
-			return &spanImpl{}
-		}},
-	}
+	rval := &tracerImpl{Options: opts}
 	rval.textPropagator = &splitTextPropagator{rval}
 	rval.binaryPropagator = &splitBinaryPropagator{rval}
 	rval.goHTTPPropagator = &goHTTPPropagator{rval.binaryPropagator}
@@ -105,7 +99,6 @@ func New(recorder SpanRecorder) opentracing.Tracer {
 // Implements the `Tracer` interface.
 type tracerImpl struct {
 	Options
-	spanPool           sync.Pool
 	textPropagator     *splitTextPropagator
 	binaryPropagator   *splitBinaryPropagator
 	goHTTPPropagator   *goHTTPPropagator
@@ -122,7 +115,7 @@ func (t *tracerImpl) StartSpan(
 }
 
 func (t *tracerImpl) getSpan() *spanImpl {
-	sp := t.spanPool.Get().(*spanImpl)
+	sp := spanPool.Get().(*spanImpl)
 	sp.reset()
 	return sp
 }

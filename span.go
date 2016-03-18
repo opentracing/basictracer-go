@@ -18,6 +18,10 @@ type spanImpl struct {
 	raw        RawSpan
 }
 
+var spanPool = &sync.Pool{New: func() interface{} {
+	return &spanImpl{}
+}}
+
 func (s *spanImpl) reset() {
 	s.tracer, s.event = nil, nil
 	// Note: Would like to do the following, but then the consumer of RawSpan
@@ -108,24 +112,20 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	duration := finishTime.Sub(s.raw.Start)
 
 	s.Lock()
+	defer s.Unlock()
 	if opts.BulkLogData != nil {
 		s.raw.Logs = append(s.raw.Logs, opts.BulkLogData...)
 	}
 	s.raw.Duration = duration
-	s.Unlock()
 
 	s.onFinish(s.raw)
 	s.tracer.Recorder.RecordSpan(s.raw)
 	if s.tracer.Options.DebugAssertUseAfterFinish {
 		// This makes it much more likely to catch a panic on any subsequent
 		// operation since s.tracer is accessed on every call to `Lock`.
-		pool := s.tracer.spanPool
 		s.reset()
-		pool.Put(s)
-	} else {
-		s.tracer.spanPool.Put(s)
 	}
-
+	spanPool.Put(s)
 }
 
 func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +39,7 @@ func (p *textMapPropagator) Inject(
 	if !ok {
 		return opentracing.ErrInvalidSpan
 	}
-	carrier, ok := opaqueCarrier.(opentracing.TextMapCarrier)
+	carrier, ok := opaqueCarrier.(opentracing.TextMapWriter)
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
@@ -60,7 +59,7 @@ func (p *textMapPropagator) Join(
 	operationName string,
 	opaqueCarrier interface{},
 ) (opentracing.Span, error) {
-	carrier, ok := opaqueCarrier.(opentracing.TextMapCarrier)
+	carrier, ok := opaqueCarrier.(opentracing.TextMapReader)
 	if !ok {
 		return nil, opentracing.ErrInvalidCarrier
 	}
@@ -69,7 +68,7 @@ func (p *textMapPropagator) Join(
 	var sampled bool
 	var err error
 	decodedBaggage := make(map[string]string)
-	err = carrier.GetAll(func(k, v string) error {
+	err = carrier.ReadAll(func(k, v string) error {
 		switch strings.ToLower(k) {
 		case fieldNameTraceID:
 			traceID, err = strconv.ParseInt(v, 16, 64)
@@ -134,7 +133,7 @@ func (p *binaryPropagator) Inject(
 	if !ok {
 		return opentracing.ErrInvalidSpan
 	}
-	carrier, ok := opaqueCarrier.(opentracing.BinaryCarrier)
+	carrier, ok := opaqueCarrier.(io.Writer)
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
@@ -188,7 +187,7 @@ func (p *binaryPropagator) Join(
 	operationName string,
 	opaqueCarrier interface{},
 ) (opentracing.Span, error) {
-	carrier, ok := opaqueCarrier.(opentracing.BinaryCarrier)
+	carrier, ok := opaqueCarrier.(io.Reader)
 	if !ok {
 		return nil, opentracing.ErrInvalidCarrier
 	}
@@ -197,6 +196,9 @@ func (p *binaryPropagator) Join(
 	var sampledByte byte
 
 	if err := binary.Read(carrier, binary.BigEndian, &traceID); err != nil {
+		if err == io.EOF {
+			return nil, opentracing.ErrTraceNotFound
+		}
 		return nil, opentracing.ErrTraceCorrupted
 	}
 	if err := binary.Read(carrier, binary.BigEndian, &propagatedSpanID); err != nil {
@@ -256,36 +258,4 @@ func (p *binaryPropagator) Join(
 		time.Now(),
 		nil,
 	), nil
-}
-
-func (p *goHTTPPropagator) Inject(
-	sp opentracing.Span,
-	opaqueCarrier interface{},
-) error {
-	headerCarrier, ok := opaqueCarrier.(http.Header)
-	if !ok {
-		return opentracing.ErrInvalidCarrier
-	}
-
-	// Defer to TextMapCarrier for the real work.
-	textMapCarrier := opentracing.HTTPHeaderTextMapCarrier{headerCarrier}
-	if err := p.textMapPropagator.Inject(sp, textMapCarrier); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p *goHTTPPropagator) Join(
-	operationName string,
-	opaqueCarrier interface{},
-) (opentracing.Span, error) {
-	headerCarrier, ok := opaqueCarrier.(http.Header)
-	if !ok {
-		return nil, opentracing.ErrInvalidCarrier
-	}
-
-	// Build a TextMapCarrier from the string->[]string http.Header map.
-	textMapCarrier := opentracing.HTTPHeaderTextMapCarrier{headerCarrier}
-	// Defer to textMapCarrier for the rest of the work.
-	return p.textMapPropagator.Join(operationName, textMapCarrier)
 }

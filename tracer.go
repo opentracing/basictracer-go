@@ -81,7 +81,6 @@ func NewWithOptions(opts Options) opentracing.Tracer {
 	rval := &tracerImpl{Options: opts}
 	rval.textPropagator = &textMapPropagator{rval}
 	rval.binaryPropagator = &binaryPropagator{rval}
-	rval.goHTTPPropagator = &goHTTPPropagator{rval.textPropagator}
 	rval.accessorPropagator = &accessorPropagator{rval}
 	return rval
 }
@@ -101,7 +100,6 @@ type tracerImpl struct {
 	Options
 	textPropagator     *textMapPropagator
 	binaryPropagator   *binaryPropagator
-	goHTTPPropagator   *goHTTPPropagator
 	accessorPropagator *accessorPropagator
 }
 
@@ -193,8 +191,6 @@ func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier int
 		return t.textPropagator.Inject(sp, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Inject(sp, carrier)
-	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator.Inject(sp, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
 		return t.accessorPropagator.Inject(sp, carrier)
@@ -208,8 +204,6 @@ func (t *tracerImpl) Join(operationName string, format interface{}, carrier inte
 		return t.textPropagator.Join(operationName, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Join(operationName, carrier)
-	case opentracing.GoHTTPHeader:
-		return t.goHTTPPropagator.Join(operationName, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
 		return t.accessorPropagator.Join(operationName, carrier)

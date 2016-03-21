@@ -35,7 +35,11 @@ func client() {
 
 		httpClient := &http.Client{}
 		httpReq, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewReader([]byte(text)))
-		opentracing.InjectSpanInHeader(span, httpReq.Header)
+		textCarrier := opentracing.HTTPHeaderTextMapCarrier(httpReq.Header)
+		err := span.Tracer().Inject(span, opentracing.TextMap, textCarrier)
+		if err != nil {
+			panic(err)
+		}
 		resp, err := httpClient.Do(httpReq)
 		if err != nil {
 			span.LogEventWithPayload("error", err)
@@ -49,8 +53,9 @@ func client() {
 
 func server() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		serverSpan, err := opentracing.JoinFromHeader(
-			"serverSpan", req.Header, opentracing.GlobalTracer())
+		textCarrier := opentracing.HTTPHeaderTextMapCarrier(req.Header)
+		serverSpan, err := opentracing.GlobalTracer().Join(
+			"serverSpan", opentracing.TextMap, textCarrier)
 		if err != nil {
 			panic(err)
 		}

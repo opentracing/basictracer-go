@@ -17,9 +17,6 @@ type textMapPropagator struct {
 type binaryPropagator struct {
 	tracer *tracerImpl
 }
-type goHTTPPropagator struct {
-	*textMapPropagator
-}
 
 const (
 	prefixTracerState = "ot-tracer-"

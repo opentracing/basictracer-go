@@ -9,6 +9,22 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
+// Span provides access to the essential details of the span, for use
+// by basictracer consumers.  These methods may only be called prior
+// to (*opentracing.Span).Finish().
+type Span interface {
+	opentracing.Span
+
+	// Context contains trace identifiers
+	Context() Context
+
+	// Operation names the work done by this span instance
+	Operation() string
+
+	// Start indicates when the span began
+	Start() time.Time
+}
+
 // Implements the `Span` interface. Created via tracerImpl (see
 // `basictracer.New()`).
 type spanImpl struct {
@@ -50,7 +66,7 @@ func (s *spanImpl) SetOperationName(operationName string) opentracing.Span {
 }
 
 func (s *spanImpl) trim() bool {
-	return !s.raw.Sampled && s.tracer.TrimUnsampledSpans
+	return !s.raw.Sampled && s.tracer.options.TrimUnsampledSpans
 }
 
 func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
@@ -119,8 +135,8 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	s.raw.Duration = duration
 
 	s.onFinish(s.raw)
-	s.tracer.Recorder.RecordSpan(s.raw)
-	if s.tracer.Options.DebugAssertUseAfterFinish {
+	s.tracer.options.Recorder.RecordSpan(s.raw)
+	if s.tracer.options.DebugAssertUseAfterFinish {
 		// This makes it much more likely to catch a panic on any subsequent
 		// operation since s.tracer is accessed on every call to `Lock`.
 		s.reset()
@@ -162,4 +178,16 @@ func (s *spanImpl) BaggageItem(restrictedKey string) string {
 
 func (s *spanImpl) Tracer() opentracing.Tracer {
 	return s.tracer
+}
+
+func (s *spanImpl) Context() Context {
+	return s.raw.Context
+}
+
+func (s *spanImpl) Operation() string {
+	return s.raw.Operation
+}
+
+func (s *spanImpl) Start() time.Time {
+	return s.raw.Start
 }

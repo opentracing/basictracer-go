@@ -11,9 +11,10 @@ bench:
 
 .PHONY: lint
 lint:
-	golint ./...
-	@# Run again with magic to exit non-zero if golint outputs anything.
-	@! (golint ./... | read dummy)
+	# Ignore grep's exit code since no match returns 1.
+	-golint ./... | grep --invert-match -E '^.*\.pb\.go'
+	@
+	@! (golint ./... |grep --invert-match -E '^.*\.pb\.go' | read dummy)
 
 .PHONY: vet
 vet:

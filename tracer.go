@@ -23,10 +23,10 @@ type Options struct {
 	// to allow deterministic sampling decisions to be made across different nodes.
 	// For example,
 	//
-	//   func(traceID int64) { return traceID % 64 == 0 }
+	//   func(traceID uint64) { return traceID % 64 == 0 }
 	//
 	// samples every 64th trace on average.
-	ShouldSample func(int64) bool
+	ShouldSample func(uint64) bool
 	// TrimUnsampledSpans turns potentially expensive operations on unsampled
 	// Spans into no-ops. More precisely, tags, baggage items, and log events
 	// are silently discarded. If NewSpanEventListener is set, the callbacks
@@ -80,7 +80,7 @@ type Options struct {
 // returned object with a Tracer.
 func DefaultOptions() Options {
 	var opts Options
-	opts.ShouldSample = func(traceID int64) bool { return traceID%64 == 0 }
+	opts.ShouldSample = func(traceID uint64) bool { return traceID%64 == 0 }
 	opts.NewSpanEventListener = func() func(SpanEvent) { return nil }
 	return opts
 }

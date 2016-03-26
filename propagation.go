@@ -14,8 +14,8 @@ type accessorPropagator struct {
 // by types which have a means of storing the trace metadata and already know
 // how to serialize themselves (for example, protocol buffers).
 type DelegatingCarrier interface {
-	SetState(traceID, spanID int64, sampled bool)
-	State() (traceID, spanID int64, sampled bool)
+	SetState(traceID, spanID uint64, sampled bool)
+	State() (traceID, spanID uint64, sampled bool)
 	SetBaggageItem(key, value string)
 	GetBaggage(func(key, value string))
 }

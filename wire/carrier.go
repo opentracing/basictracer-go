@@ -7,14 +7,14 @@ package wire
 type ProtobufCarrier TracerState
 
 // SetState set's the tracer state.
-func (p *ProtobufCarrier) SetState(traceID, spanID int64, sampled bool) {
+func (p *ProtobufCarrier) SetState(traceID, spanID uint64, sampled bool) {
 	p.TraceId = traceID
 	p.SpanId = spanID
 	p.Sampled = sampled
 }
 
 // State returns the tracer state.
-func (p *ProtobufCarrier) State() (traceID, spanID int64, sampled bool) {
+func (p *ProtobufCarrier) State() (traceID, spanID uint64, sampled bool) {
 	traceID = p.TraceId
 	spanID = p.SpanId
 	sampled = p.Sampled

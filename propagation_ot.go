@@ -41,8 +41,8 @@ func (p *textMapPropagator) Inject(
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
-	carrier.Set(fieldNameTraceID, strconv.FormatInt(sc.raw.TraceID, 16))
-	carrier.Set(fieldNameSpanID, strconv.FormatInt(sc.raw.SpanID, 16))
+	carrier.Set(fieldNameTraceID, strconv.FormatUint(sc.raw.TraceID, 16))
+	carrier.Set(fieldNameSpanID, strconv.FormatUint(sc.raw.SpanID, 16))
 	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.raw.Sampled))
 
 	sc.Lock()
@@ -62,19 +62,19 @@ func (p *textMapPropagator) Join(
 		return nil, opentracing.ErrInvalidCarrier
 	}
 	requiredFieldCount := 0
-	var traceID, propagatedSpanID int64
+	var traceID, propagatedSpanID uint64
 	var sampled bool
 	var err error
 	decodedBaggage := make(map[string]string)
 	err = carrier.ForeachKey(func(k, v string) error {
 		switch strings.ToLower(k) {
 		case fieldNameTraceID:
-			traceID, err = strconv.ParseInt(v, 16, 64)
+			traceID, err = strconv.ParseUint(v, 16, 64)
 			if err != nil {
 				return opentracing.ErrTraceCorrupted
 			}
 		case fieldNameSpanID:
-			propagatedSpanID, err = strconv.ParseInt(v, 16, 64)
+			propagatedSpanID, err = strconv.ParseUint(v, 16, 64)
 			if err != nil {
 				return opentracing.ErrTraceCorrupted
 			}

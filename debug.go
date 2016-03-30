@@ -26,7 +26,7 @@ func (s *spanImpl) maybeAssertSanityLocked() {
 			msg: fmt.Sprintf("span used after Finish()"),
 		})
 	}
-	if s.tracer.Options.DebugAssertSingleGoroutine {
+	if s.tracer.options.DebugAssertSingleGoroutine {
 		startID := curGoroutineID()
 		curID, ok := s.raw.Tags[debugGoroutineIDTag].(uint64)
 		if !ok {

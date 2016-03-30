@@ -6,6 +6,15 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
+// Tracer extends the opentracing.Tracer interface with methods to
+// probe implementation state, for use by basictracer consumers.
+type Tracer interface {
+	opentracing.Tracer
+
+	// Options gets the Options used in New() or NewWithOptions().
+	Options() Options
+}
+
 // Options allows creating a customized Tracer via NewWithOptions. The object
 // must not be updated when there is an active tracer using it.
 type Options struct {
@@ -78,7 +87,7 @@ func DefaultOptions() Options {
 
 // NewWithOptions creates a customized Tracer.
 func NewWithOptions(opts Options) opentracing.Tracer {
-	rval := &tracerImpl{Options: opts}
+	rval := &tracerImpl{options: opts}
 	rval.textPropagator = &textMapPropagator{rval}
 	rval.binaryPropagator = &binaryPropagator{rval}
 	rval.accessorPropagator = &accessorPropagator{rval}
@@ -97,7 +106,7 @@ func New(recorder SpanRecorder) opentracing.Tracer {
 
 // Implements the `Tracer` interface.
 type tracerImpl struct {
-	Options
+	options            Options
 	textPropagator     *textMapPropagator
 	binaryPropagator   *binaryPropagator
 	accessorPropagator *accessorPropagator
@@ -135,7 +144,7 @@ func (t *tracerImpl) StartSpanWithOptions(
 	sp := t.getSpan()
 	if opts.Parent == nil {
 		sp.raw.TraceID, sp.raw.SpanID = randomID2()
-		sp.raw.Sampled = t.ShouldSample(sp.raw.TraceID)
+		sp.raw.Sampled = t.options.ShouldSample(sp.raw.TraceID)
 	} else {
 		pr := opts.Parent.(*spanImpl)
 		sp.raw.TraceID = pr.raw.TraceID
@@ -168,12 +177,12 @@ func (t *tracerImpl) startSpanInternal(
 	tags opentracing.Tags,
 ) opentracing.Span {
 	sp.tracer = t
-	sp.event = t.NewSpanEventListener()
+	sp.event = t.options.NewSpanEventListener()
 	sp.raw.Operation = operationName
 	sp.raw.Start = startTime
 	sp.raw.Duration = -1
 	sp.raw.Tags = tags
-	if t.Options.DebugAssertSingleGoroutine {
+	if t.options.DebugAssertSingleGoroutine {
 		sp.SetTag(debugGoroutineIDTag, curGoroutineID())
 	}
 	defer sp.onCreate(operationName)
@@ -209,4 +218,8 @@ func (t *tracerImpl) Join(operationName string, format interface{}, carrier inte
 		return t.accessorPropagator.Join(operationName, carrier)
 	}
 	return nil, opentracing.ErrUnsupportedFormat
+}
+
+func (t *tracerImpl) Options() Options {
+	return t.options
 }

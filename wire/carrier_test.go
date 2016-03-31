@@ -10,7 +10,7 @@ import (
 func TestProtobufCarrier(t *testing.T) {
 	var carrier basictracer.DelegatingCarrier = &wire.ProtobufCarrier{}
 
-	var traceID, spanID int64 = 1, 2
+	var traceID, spanID uint64 = 1, 2
 	sampled := true
 	baggageKey, expVal := "key1", "val1"
 

@@ -29,11 +29,11 @@ func (vc *verbatimCarrier) GetBaggage(f func(string, string)) {
 	}
 }
 
-func (vc *verbatimCarrier) SetState(tID, sID int64, sampled bool) {
+func (vc *verbatimCarrier) SetState(tID, sID uint64, sampled bool) {
 	vc.Context = basictracer.Context{TraceID: tID, SpanID: sID, Sampled: sampled}
 }
 
-func (vc *verbatimCarrier) State() (traceID, spanID int64, sampled bool) {
+func (vc *verbatimCarrier) State() (traceID, spanID uint64, sampled bool) {
 	return vc.Context.TraceID, vc.Context.SpanID, vc.Context.Sampled
 }
 

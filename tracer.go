@@ -26,7 +26,7 @@ type Options struct {
 	//   func(traceID uint64) { return traceID % 64 == 0 }
 	//
 	// samples every 64th trace on average.
-	ShouldSample func(uint64) bool
+	ShouldSample func(traceID uint64) bool
 	// TrimUnsampledSpans turns potentially expensive operations on unsampled
 	// Spans into no-ops. More precisely, tags, baggage items, and log events
 	// are silently discarded. If NewSpanEventListener is set, the callbacks

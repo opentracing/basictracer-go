@@ -49,7 +49,7 @@ type Options struct {
 	//  func (s *Server) Handle(req http.Request) error {
 	//    sp := s.StartSpan("server")
 	//    defer sp.Finish()
-	//    wait := s.queueProcessing(opentracing.ContextWithSpan(context.Background(), ctx), req)
+	//    wait := s.queueProcessing(opentracing.ContextWithSpan(context.Background(), sp), req)
 	//    select {
 	//    case resp := <-wait:
 	//      return resp.Error

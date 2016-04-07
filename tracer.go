@@ -202,7 +202,7 @@ func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier int
 		return t.textPropagator.Inject(sp, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Inject(sp, carrier)
-	case opentracing.InMemory:
+	case InMemory:
 		return t.inMemoryPropagator.Inject(sp, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
@@ -217,7 +217,7 @@ func (t *tracerImpl) Join(operationName string, format interface{}, carrier inte
 		return t.textPropagator.Join(operationName, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Join(operationName, carrier)
-	case opentracing.InMemory:
+	case InMemory:
 		return t.inMemoryPropagator.Join(operationName, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {

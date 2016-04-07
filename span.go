@@ -44,11 +44,11 @@ func (s *spanImpl) reset() {
 	// (the recorder) needs to make sure that they're not holding on to the
 	// baggage or logs when they return (i.e. they need to copy if they care):
 	//
-	// logs, baggage := s.raw.Logs[:0], s.raw.Baggage
+	// logs, baggage := s.raw.Logs[:0], s.raw.Context.Baggage
 	// for k := range baggage {
 	// 	delete(baggage, k)
 	// }
-	// s.raw.Logs, s.raw.Baggage = logs, baggage
+	// s.raw.Logs, s.raw.Context.Baggage = logs, baggage
 	//
 	// That's likely too much to ask for. But there is some magic we should
 	// be able to do with `runtime.SetFinalizer` to reclaim that memory into
@@ -157,10 +157,10 @@ func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {
 		return s
 	}
 
-	if s.raw.Baggage == nil {
-		s.raw.Baggage = make(map[string]string)
+	if s.raw.Context.Baggage == nil {
+		s.raw.Context.Baggage = make(map[string]string)
 	}
-	s.raw.Baggage[canonicalKey] = val
+	s.raw.Context.Baggage[canonicalKey] = val
 	return s
 }
 
@@ -173,7 +173,7 @@ func (s *spanImpl) BaggageItem(restrictedKey string) string {
 	s.Lock()
 	defer s.Unlock()
 
-	return s.raw.Baggage[canonicalKey]
+	return s.raw.Context.Baggage[canonicalKey]
 }
 
 func (s *spanImpl) Tracer() opentracing.Tracer {

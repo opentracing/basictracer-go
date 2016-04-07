@@ -46,7 +46,7 @@ func (p *textMapPropagator) Inject(
 	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.raw.Sampled))
 
 	sc.Lock()
-	for k, v := range sc.raw.Baggage {
+	for k, v := range sc.raw.Context.Baggage {
 		carrier.Set(prefixBaggage+k, v)
 	}
 	sc.Unlock()
@@ -111,8 +111,8 @@ func (p *textMapPropagator) Join(
 			SpanID:       randomID(),
 			ParentSpanID: propagatedSpanID,
 			Sampled:      sampled,
+			Baggage:      decodedBaggage,
 		},
-		Baggage: decodedBaggage,
 	}
 
 	return p.tracer.startSpanInternal(
@@ -140,7 +140,7 @@ func (p *binaryPropagator) Inject(
 	state.TraceId = sc.raw.TraceID
 	state.SpanId = sc.raw.SpanID
 	state.Sampled = sc.raw.Sampled
-	state.BaggageItems = sc.raw.Baggage
+	state.BaggageItems = sc.raw.Context.Baggage
 
 	b, err := proto.Marshal(&state)
 	if err != nil {

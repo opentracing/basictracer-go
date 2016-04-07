@@ -34,7 +34,7 @@ func (p *accessorPropagator) Inject(
 	}
 	meta := si.raw.Context
 	ac.SetState(meta.TraceID, meta.SpanID, meta.Sampled)
-	for k, v := range si.raw.Baggage {
+	for k, v := range si.raw.Context.Baggage {
 		ac.SetBaggageItem(k, v)
 	}
 	return nil
@@ -50,20 +50,22 @@ func (p *accessorPropagator) Join(
 	}
 
 	sp := p.tracer.getSpan()
-	ac.GetBaggage(func(k, v string) {
-		if sp.raw.Baggage == nil {
-			sp.raw.Baggage = map[string]string{}
-		}
-		sp.raw.Baggage[k] = v
-	})
 
 	traceID, parentSpanID, sampled := ac.State()
+
 	sp.raw.Context = Context{
 		TraceID:      traceID,
 		SpanID:       randomID(),
 		ParentSpanID: parentSpanID,
 		Sampled:      sampled,
 	}
+
+	ac.GetBaggage(func(k, v string) {
+		if sp.raw.Context.Baggage == nil {
+			sp.raw.Context.Baggage = map[string]string{}
+		}
+		sp.raw.Context.Baggage[k] = v
+	})
 
 	return p.tracer.startSpanInternal(
 		sp,

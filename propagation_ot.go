@@ -18,6 +18,9 @@ type textMapPropagator struct {
 type binaryPropagator struct {
 	tracer *tracerImpl
 }
+type inMemoryPropagator struct {
+	tracer *tracerImpl
+}
 
 const (
 	prefixTracerState = "ot-tracer-"
@@ -198,6 +201,67 @@ func (p *binaryPropagator) Join(
 	}
 
 	sp.raw.Baggage = ctx.BaggageItems
+
+	return p.tracer.startSpanInternal(
+		sp,
+		operationName,
+		time.Now(),
+		nil,
+	), nil
+}
+
+func (p *inMemoryPropagator) Inject(
+	sp opentracing.Span,
+	carrier interface{},
+) error {
+	s, ok := sp.(*spanImpl)
+	if !ok {
+		return opentracing.ErrInvalidSpan
+	}
+
+	inmem, ok := carrier.(*InMemoryCarrier)
+	if !ok {
+		return opentracing.ErrInvalidCarrier
+	}
+	ctx := Context{
+		TraceID:      s.raw.Context.TraceID,
+		SpanID:       s.raw.Context.SpanID,
+		ParentSpanID: s.raw.Context.ParentSpanID,
+		Sampled:      s.raw.Context.Sampled,
+	}
+	s.Lock()
+	ctx.Baggage = make(map[string]string, len(s.raw.Context.Baggage))
+	for k, v := range s.raw.Context.Baggage {
+		ctx.Baggage[k] = v
+	}
+	s.Unlock()
+	inmem.TracerState = ctx
+	return nil
+}
+
+func (p *inMemoryPropagator) Join(
+	operationName string,
+	carrier interface{},
+) (opentracing.Span, error) {
+	inMemCarrier, ok := carrier.(*InMemoryCarrier)
+	if !ok {
+		return nil, opentracing.ErrInvalidCarrier
+	}
+	ctx, ok := inMemCarrier.TracerState.(Context)
+	if !ok {
+		return nil, opentracing.ErrInvalidCarrier
+	}
+
+	sp := p.tracer.getSpan()
+	sp.raw = RawSpan{
+		Context: Context{
+			TraceID:      ctx.TraceID,
+			SpanID:       randomID(),
+			ParentSpanID: ctx.SpanID,
+			Sampled:      ctx.Sampled,
+			Baggage:      ctx.Baggage,
+		},
+	}
 
 	return p.tracer.startSpanInternal(
 		sp,

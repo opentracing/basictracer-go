@@ -53,6 +53,7 @@ func TestSpanPropagator(t *testing.T) {
 		{basictracer.Delegator, basictracer.DelegatingCarrier(&verbatimCarrier{Context: basictracer.Context{Baggage: map[string]string{}}})},
 		{opentracing.Binary, &bytes.Buffer{}},
 		{opentracing.TextMap, tmc},
+		{opentracing.InMemory, &basictracer.InMemoryCarrier{}},
 	}
 
 	for i, test := range tests {

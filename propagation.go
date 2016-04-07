@@ -6,6 +6,23 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
+const (
+	// InMemory stores a copy of a Span's state.
+	//
+	// Useful for passing along Span information across goroutines without
+	// actually passing a live Span.
+	// NOTE: This would go into the opentracing-go package. The constant number
+	// is abritrary to prevent any classes with the OT consts.
+	InMemory = 10
+)
+
+// InMemoryCarrier holds a copy of a Span's state. The underyling value can be
+// of any arbritrary type. There is no expectation for interopability between
+// different languages.
+type InMemoryCarrier struct {
+	TracerState interface{}
+}
+
 type accessorPropagator struct {
 	tracer *tracerImpl
 }

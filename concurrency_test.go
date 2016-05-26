@@ -92,3 +92,20 @@ func TestConcurrentUsage(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestDisableSpanPool(t *testing.T) {
+	opts := DefaultOptions()
+	opts.DisableSpanPool = true
+	var cr CountingRecorder
+	opts.Recorder = &cr
+	tracer := NewWithOptions(opts)
+
+	parent := tracer.StartSpan("parent")
+	parent.Finish()
+	// This shound't panic.
+	child := tracer.StartSpanWithOptions(opentracing.StartSpanOptions{
+		Parent:        parent,
+		OperationName: "child",
+	})
+	child.Finish()
+}

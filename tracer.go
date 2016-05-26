@@ -73,6 +73,12 @@ type Options struct {
 	// When set, it attempts to exacerbate issues emanating from use of Spans
 	// after calling Finish by running additional assertions.
 	DebugAssertUseAfterFinish bool
+	// DisableSpanPool disables reuse of the underlying span structs.
+	// Buyer Beware, any operations called on a span after Finish is undefined
+	// behavior. The main usecase of disabling the pool is to allow the creation
+	// of children spans after Finish() has been called on the parent span.
+	// There is a performance loss when disabling the pool.
+	DisableSpanPool bool
 }
 
 // DefaultOptions returns an Options object with a 1 in 64 sampling rate and
@@ -82,6 +88,7 @@ func DefaultOptions() Options {
 	var opts Options
 	opts.ShouldSample = func(traceID uint64) bool { return traceID%64 == 0 }
 	opts.NewSpanEventListener = func() func(SpanEvent) { return nil }
+	opts.DisableSpanPool = false
 	return opts
 }
 
@@ -122,6 +129,9 @@ func (t *tracerImpl) StartSpan(
 }
 
 func (t *tracerImpl) getSpan() *spanImpl {
+	if t.options.DisableSpanPool {
+		return &spanImpl{}
+	}
 	sp := spanPool.Get().(*spanImpl)
 	sp.reset()
 	return sp

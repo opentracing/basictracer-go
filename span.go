@@ -137,20 +137,17 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	s.onFinish(s.raw)
 	s.tracer.options.Recorder.RecordSpan(s.raw)
 
-	// Last chance to get options before the span is possibly reset.
-	poolDisabled := s.tracer.options.DisableSpanPool
-
+	// Last chance to get options before the span is possbily reset.
+	poolEnabled := s.tracer.options.EnableSpanPool
 	if s.tracer.options.DebugAssertUseAfterFinish {
 		// This makes it much more likely to catch a panic on any subsequent
 		// operation since s.tracer is accessed on every call to `Lock`.
 		s.reset()
 	}
 
-	// Don't put it in the pool.
-	if poolDisabled {
-		return
+	if poolEnabled {
+		spanPool.Put(s)
 	}
-	spanPool.Put(s)
 }
 
 func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {

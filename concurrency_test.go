@@ -11,6 +11,7 @@ const op = "test"
 
 func TestDebugAssertSingleGoroutine(t *testing.T) {
 	opts := DefaultOptions()
+	opts.EnableSpanPool = true
 	opts.Recorder = NewInMemoryRecorder()
 	opts.DebugAssertSingleGoroutine = true
 	tracer := NewWithOptions(opts)
@@ -35,6 +36,7 @@ func TestDebugAssertSingleGoroutine(t *testing.T) {
 
 func TestDebugAssertUseAfterFinish(t *testing.T) {
 	opts := DefaultOptions()
+	opts.EnableSpanPool = true
 	opts.Recorder = NewInMemoryRecorder()
 	opts.DebugAssertUseAfterFinish = true
 	tracer := NewWithOptions(opts)
@@ -66,6 +68,7 @@ func TestDebugAssertUseAfterFinish(t *testing.T) {
 
 func TestConcurrentUsage(t *testing.T) {
 	opts := DefaultOptions()
+	opts.EnableSpanPool = true
 	var cr CountingRecorder
 	opts.Recorder = &cr
 	opts.DebugAssertSingleGoroutine = true
@@ -91,4 +94,20 @@ func TestConcurrentUsage(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestDisableSpanPool(t *testing.T) {
+	opts := DefaultOptions()
+	var cr CountingRecorder
+	opts.Recorder = &cr
+	tracer := NewWithOptions(opts)
+
+	parent := tracer.StartSpan("parent")
+	parent.Finish()
+	// This shouldn't panic.
+	child := tracer.StartSpanWithOptions(opentracing.StartSpanOptions{
+		Parent:        parent,
+		OperationName: "child",
+	})
+	child.Finish()
 }

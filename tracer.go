@@ -73,6 +73,11 @@ type Options struct {
 	// When set, it attempts to exacerbate issues emanating from use of Spans
 	// after calling Finish by running additional assertions.
 	DebugAssertUseAfterFinish bool
+	// EnableSpanPool enables the use of a pool, so that the tracer reuses spans
+	// after Finish has been called on it. Adds a slight performance gain as it
+	// reduces allocations. However, if you have any use-after-finish race
+	// conditions the code may panic.
+	EnableSpanPool bool
 }
 
 // DefaultOptions returns an Options object with a 1 in 64 sampling rate and
@@ -122,9 +127,12 @@ func (t *tracerImpl) StartSpan(
 }
 
 func (t *tracerImpl) getSpan() *spanImpl {
-	sp := spanPool.Get().(*spanImpl)
-	sp.reset()
-	return sp
+	if t.options.EnableSpanPool {
+		sp := spanPool.Get().(*spanImpl)
+		sp.reset()
+		return sp
+	}
+	return &spanImpl{}
 }
 
 func (t *tracerImpl) StartSpanWithOptions(

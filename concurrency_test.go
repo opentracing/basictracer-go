@@ -104,7 +104,7 @@ func TestDisableSpanPool(t *testing.T) {
 
 	parent := tracer.StartSpan("parent")
 	parent.Finish()
-	// This shound't panic.
+	// This shouldn't panic.
 	child := tracer.StartSpanWithOptions(opentracing.StartSpanOptions{
 		Parent:        parent,
 		OperationName: "child",

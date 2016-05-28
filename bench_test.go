@@ -103,6 +103,8 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 		carrier = opentracing.HTTPHeaderTextMapCarrier(http.Header{})
 	case opentracing.Binary:
 		carrier = &bytes.Buffer{}
+	case InMemory:
+		carrier = &InMemoryCarrier{}
 	default:
 		b.Fatalf("unhandled format %d", format)
 	}
@@ -126,6 +128,8 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 		carrier = opentracing.HTTPHeaderTextMapCarrier(http.Header{})
 	case opentracing.Binary:
 		carrier = &bytes.Buffer{}
+	case InMemory:
+		carrier = &InMemoryCarrier{}
 	default:
 		b.Fatalf("unhandled format %d", format)
 	}
@@ -168,6 +172,14 @@ func BenchmarkInject_Binary_100BaggageItems(b *testing.B) {
 	benchmarkInject(b, opentracing.Binary, 100)
 }
 
+func BenchmarkInject_InMemory_Empty(b *testing.B) {
+	benchmarkInject(b, InMemory, 0)
+}
+
+func BenchmarkInject_InMemory_100BaggageItems(b *testing.B) {
+	benchmarkInject(b, InMemory, 100)
+}
+
 func BenchmarkJoin_TextMap_Empty(b *testing.B) {
 	benchmarkJoin(b, opentracing.TextMap, 0)
 }
@@ -182,4 +194,12 @@ func BenchmarkJoin_Binary_Empty(b *testing.B) {
 
 func BenchmarkJoin_Binary_100BaggageItems(b *testing.B) {
 	benchmarkJoin(b, opentracing.Binary, 100)
+}
+
+func BenchmarkJoin_InMemory_Empty(b *testing.B) {
+	benchmarkJoin(b, InMemory, 0)
+}
+
+func BenchmarkJoin_InMemory_100BaggageItems(b *testing.B) {
+	benchmarkJoin(b, InMemory, 100)
 }

@@ -6,6 +6,23 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 )
 
+const (
+	// InMemory stores a copy of a Span's state.
+	//
+	// Useful for passing along Span information across goroutines without
+	// actually passing a live Span.
+	// NOTE: This would go into the opentracing-go package. The constant number
+	// is abritrary to prevent any classes with the OT consts.
+	InMemory = 10
+)
+
+// InMemoryCarrier holds a copy of a Span's state. The underyling value can be
+// of any arbritrary type. There is no expectation for interopability between
+// different languages.
+type InMemoryCarrier struct {
+	TracerState interface{}
+}
+
 type accessorPropagator struct {
 	tracer *tracerImpl
 }
@@ -34,7 +51,7 @@ func (p *accessorPropagator) Inject(
 	}
 	meta := si.raw.Context
 	ac.SetState(meta.TraceID, meta.SpanID, meta.Sampled)
-	for k, v := range si.raw.Baggage {
+	for k, v := range si.raw.Context.Baggage {
 		ac.SetBaggageItem(k, v)
 	}
 	return nil
@@ -50,20 +67,22 @@ func (p *accessorPropagator) Join(
 	}
 
 	sp := p.tracer.getSpan()
-	ac.GetBaggage(func(k, v string) {
-		if sp.raw.Baggage == nil {
-			sp.raw.Baggage = map[string]string{}
-		}
-		sp.raw.Baggage[k] = v
-	})
 
 	traceID, parentSpanID, sampled := ac.State()
+
 	sp.raw.Context = Context{
 		TraceID:      traceID,
 		SpanID:       randomID(),
 		ParentSpanID: parentSpanID,
 		Sampled:      sampled,
 	}
+
+	ac.GetBaggage(func(k, v string) {
+		if sp.raw.Context.Baggage == nil {
+			sp.raw.Context.Baggage = map[string]string{}
+		}
+		sp.raw.Context.Baggage[k] = v
+	})
 
 	return p.tracer.startSpanInternal(
 		sp,

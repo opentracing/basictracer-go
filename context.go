@@ -13,4 +13,7 @@ type Context struct {
 
 	// Whether the trace is sampled.
 	Sampled bool
+
+	// The span's associated baggage.
+	Baggage map[string]string // initialized on first use
 }

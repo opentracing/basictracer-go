@@ -96,6 +96,7 @@ func NewWithOptions(opts Options) opentracing.Tracer {
 	rval.textPropagator = &textMapPropagator{rval}
 	rval.binaryPropagator = &binaryPropagator{rval}
 	rval.accessorPropagator = &accessorPropagator{rval}
+	rval.inMemoryPropagator = &inMemoryPropagator{rval}
 	return rval
 }
 
@@ -115,6 +116,7 @@ type tracerImpl struct {
 	textPropagator     *textMapPropagator
 	binaryPropagator   *binaryPropagator
 	accessorPropagator *accessorPropagator
+	inMemoryPropagator *inMemoryPropagator
 }
 
 func (t *tracerImpl) StartSpan(
@@ -208,6 +210,8 @@ func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier int
 		return t.textPropagator.Inject(sp, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Inject(sp, carrier)
+	case InMemory:
+		return t.inMemoryPropagator.Inject(sp, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
 		return t.accessorPropagator.Inject(sp, carrier)
@@ -221,6 +225,8 @@ func (t *tracerImpl) Join(operationName string, format interface{}, carrier inte
 		return t.textPropagator.Join(operationName, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Join(operationName, carrier)
+	case InMemory:
+		return t.inMemoryPropagator.Join(operationName, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
 		return t.accessorPropagator.Join(operationName, carrier)

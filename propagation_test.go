@@ -14,27 +14,28 @@ import (
 
 type verbatimCarrier struct {
 	basictracer.Context
-	b map[string]string
 }
 
 var _ basictracer.DelegatingCarrier = &verbatimCarrier{}
 
 func (vc *verbatimCarrier) SetBaggageItem(k, v string) {
-	vc.b[k] = v
+	vc.Baggage[k] = v
 }
 
 func (vc *verbatimCarrier) GetBaggage(f func(string, string)) {
-	for k, v := range vc.b {
+	for k, v := range vc.Baggage {
 		f(k, v)
 	}
 }
 
 func (vc *verbatimCarrier) SetState(tID, sID uint64, sampled bool) {
-	vc.Context = basictracer.Context{TraceID: tID, SpanID: sID, Sampled: sampled}
+	vc.TraceID = tID
+	vc.SpanID = sID
+	vc.Sampled = sampled
 }
 
 func (vc *verbatimCarrier) State() (traceID, spanID uint64, sampled bool) {
-	return vc.Context.TraceID, vc.Context.SpanID, vc.Context.Sampled
+	return vc.TraceID, vc.SpanID, vc.Sampled
 }
 
 func TestSpanPropagator(t *testing.T) {
@@ -49,9 +50,10 @@ func TestSpanPropagator(t *testing.T) {
 	tests := []struct {
 		typ, carrier interface{}
 	}{
-		{basictracer.Delegator, basictracer.DelegatingCarrier(&verbatimCarrier{b: map[string]string{}})},
+		{basictracer.Delegator, basictracer.DelegatingCarrier(&verbatimCarrier{Context: basictracer.Context{Baggage: map[string]string{}}})},
 		{opentracing.Binary, &bytes.Buffer{}},
 		{opentracing.TextMap, tmc},
+		{basictracer.InMemory, &basictracer.InMemoryCarrier{}},
 	}
 
 	for i, test := range tests {

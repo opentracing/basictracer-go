@@ -5,7 +5,6 @@ import (
 	"io"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/opentracing/basictracer-go/wire"
@@ -30,39 +29,38 @@ const (
 )
 
 func (p *textMapPropagator) Inject(
-	sp opentracing.Span,
+	spanContext opentracing.SpanContext,
 	opaqueCarrier interface{},
 ) error {
-	sc, ok := sp.(*spanImpl)
+	sc, ok := spanContext.(*SpanContext)
 	if !ok {
-		return opentracing.ErrInvalidSpan
+		return opentracing.ErrInvalidSpanContext
 	}
 	carrier, ok := opaqueCarrier.(opentracing.TextMapWriter)
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
-	carrier.Set(fieldNameTraceID, strconv.FormatUint(sc.raw.TraceID, 16))
-	carrier.Set(fieldNameSpanID, strconv.FormatUint(sc.raw.SpanID, 16))
-	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.raw.Sampled))
+	carrier.Set(fieldNameTraceID, strconv.FormatUint(sc.TraceID, 16))
+	carrier.Set(fieldNameSpanID, strconv.FormatUint(sc.SpanID, 16))
+	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.Sampled))
 
-	sc.Lock()
-	for k, v := range sc.raw.Baggage {
+	sc.baggageLock.Lock()
+	for k, v := range sc.Baggage {
 		carrier.Set(prefixBaggage+k, v)
 	}
-	sc.Unlock()
+	sc.baggageLock.Unlock()
 	return nil
 }
 
-func (p *textMapPropagator) Join(
-	operationName string,
+func (p *textMapPropagator) Extract(
 	opaqueCarrier interface{},
-) (opentracing.Span, error) {
+) (opentracing.SpanContext, error) {
 	carrier, ok := opaqueCarrier.(opentracing.TextMapReader)
 	if !ok {
 		return nil, opentracing.ErrInvalidCarrier
 	}
 	requiredFieldCount := 0
-	var traceID, propagatedSpanID uint64
+	var traceID, spanID uint64
 	var sampled bool
 	var err error
 	decodedBaggage := make(map[string]string)
@@ -71,17 +69,17 @@ func (p *textMapPropagator) Join(
 		case fieldNameTraceID:
 			traceID, err = strconv.ParseUint(v, 16, 64)
 			if err != nil {
-				return opentracing.ErrTraceCorrupted
+				return opentracing.ErrSpanContextCorrupted
 			}
 		case fieldNameSpanID:
-			propagatedSpanID, err = strconv.ParseUint(v, 16, 64)
+			spanID, err = strconv.ParseUint(v, 16, 64)
 			if err != nil {
-				return opentracing.ErrTraceCorrupted
+				return opentracing.ErrSpanContextCorrupted
 			}
 		case fieldNameSampled:
 			sampled, err = strconv.ParseBool(v)
 			if err != nil {
-				return opentracing.ErrTraceCorrupted
+				return opentracing.ErrSpanContextCorrupted
 			}
 		default:
 			lowercaseK := strings.ToLower(k)
@@ -99,37 +97,26 @@ func (p *textMapPropagator) Join(
 	}
 	if requiredFieldCount < tracerStateFieldCount {
 		if requiredFieldCount == 0 {
-			return nil, opentracing.ErrTraceNotFound
+			return nil, opentracing.ErrSpanContextNotFound
 		}
-		return nil, opentracing.ErrTraceCorrupted
+		return nil, opentracing.ErrSpanContextCorrupted
 	}
 
-	sp := p.tracer.getSpan()
-	sp.raw = RawSpan{
-		Context: Context{
-			TraceID:      traceID,
-			SpanID:       randomID(),
-			ParentSpanID: propagatedSpanID,
-			Sampled:      sampled,
-		},
+	return &SpanContext{
+		TraceID: traceID,
+		SpanID:  spanID,
+		Sampled: sampled,
 		Baggage: decodedBaggage,
-	}
-
-	return p.tracer.startSpanInternal(
-		sp,
-		operationName,
-		time.Now(),
-		nil,
-	), nil
+	}, nil
 }
 
 func (p *binaryPropagator) Inject(
-	sp opentracing.Span,
+	spanContext opentracing.SpanContext,
 	opaqueCarrier interface{},
 ) error {
-	sc, ok := sp.(*spanImpl)
+	sc, ok := spanContext.(*SpanContext)
 	if !ok {
-		return opentracing.ErrInvalidSpan
+		return opentracing.ErrInvalidSpanContext
 	}
 	carrier, ok := opaqueCarrier.(io.Writer)
 	if !ok {
@@ -137,10 +124,10 @@ func (p *binaryPropagator) Inject(
 	}
 
 	state := wire.TracerState{}
-	state.TraceId = sc.raw.TraceID
-	state.SpanId = sc.raw.SpanID
-	state.Sampled = sc.raw.Sampled
-	state.BaggageItems = sc.raw.Baggage
+	state.TraceId = sc.TraceID
+	state.SpanId = sc.SpanID
+	state.Sampled = sc.Sampled
+	state.BaggageItems = sc.Baggage
 
 	b, err := proto.Marshal(&state)
 	if err != nil {
@@ -157,10 +144,9 @@ func (p *binaryPropagator) Inject(
 	return err
 }
 
-func (p *binaryPropagator) Join(
-	operationName string,
+func (p *binaryPropagator) Extract(
 	opaqueCarrier interface{},
-) (opentracing.Span, error) {
+) (opentracing.SpanContext, error) {
 	carrier, ok := opaqueCarrier.(io.Reader)
 	if !ok {
 		return nil, opentracing.ErrInvalidCarrier
@@ -172,37 +158,25 @@ func (p *binaryPropagator) Join(
 	// the exact amount of bytes into it.
 	var length uint32
 	if err := binary.Read(carrier, binary.BigEndian, &length); err != nil {
-		return nil, opentracing.ErrTraceCorrupted
+		return nil, opentracing.ErrSpanContextCorrupted
 	}
 	buf := make([]byte, length)
 	if n, err := carrier.Read(buf); err != nil {
 		if n > 0 {
-			return nil, opentracing.ErrTraceCorrupted
+			return nil, opentracing.ErrSpanContextCorrupted
 		}
-		return nil, opentracing.ErrTraceNotFound
+		return nil, opentracing.ErrSpanContextNotFound
 	}
 
 	ctx := wire.TracerState{}
 	if err := proto.Unmarshal(buf, &ctx); err != nil {
-		return nil, opentracing.ErrTraceCorrupted
+		return nil, opentracing.ErrSpanContextCorrupted
 	}
 
-	sp := p.tracer.getSpan()
-	sp.raw = RawSpan{
-		Context: Context{
-			TraceID:      ctx.TraceId,
-			SpanID:       randomID(),
-			ParentSpanID: ctx.SpanId,
-			Sampled:      ctx.Sampled,
-		},
-	}
-
-	sp.raw.Baggage = ctx.BaggageItems
-
-	return p.tracer.startSpanInternal(
-		sp,
-		operationName,
-		time.Now(),
-		nil,
-	), nil
+	return &SpanContext{
+		TraceID: ctx.TraceId,
+		SpanID:  ctx.SpanId,
+		Sampled: ctx.Sampled,
+		Baggage: ctx.BaggageItems,
+	}, nil
 }

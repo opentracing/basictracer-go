@@ -35,7 +35,7 @@ func (t *TrivialRecorder) RecordSpan(span basictracer.RawSpan) {
 	fmt.Printf(
 		"RecordSpan: %v[%v, %v us] --> %v logs. std context: %v; baggage: %v\n",
 		span.Operation, span.Start, span.Duration, len(span.Logs),
-		span.Context, span.Baggage)
+		span.SpanContext, span.Baggage)
 	for i, l := range span.Logs {
 		fmt.Printf(
 			"    log %v @ %v: %v --> %v\n", i, l.Timestamp, l.Event, reflect.TypeOf(l.Payload))

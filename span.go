@@ -1,7 +1,6 @@
 package basictracer
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -14,9 +13,6 @@ import (
 // to (*opentracing.Span).Finish().
 type Span interface {
 	opentracing.Span
-
-	// Context contains trace identifiers
-	Context() Context
 
 	// Operation names the work done by this span instance
 	Operation() string
@@ -150,44 +146,12 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	}
 }
 
-func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {
-	canonicalKey, valid := opentracing.CanonicalizeBaggageKey(restrictedKey)
-	if !valid {
-		panic(fmt.Errorf("Invalid key: %q", restrictedKey))
-	}
-
-	s.Lock()
-	defer s.Unlock()
-	s.onBaggage(canonicalKey, val)
-	if s.trim() {
-		return s
-	}
-
-	if s.raw.Baggage == nil {
-		s.raw.Baggage = make(map[string]string)
-	}
-	s.raw.Baggage[canonicalKey] = val
-	return s
-}
-
-func (s *spanImpl) BaggageItem(restrictedKey string) string {
-	canonicalKey, valid := opentracing.CanonicalizeBaggageKey(restrictedKey)
-	if !valid {
-		panic(fmt.Errorf("Invalid key: %q", restrictedKey))
-	}
-
-	s.Lock()
-	defer s.Unlock()
-
-	return s.raw.Baggage[canonicalKey]
-}
-
 func (s *spanImpl) Tracer() opentracing.Tracer {
 	return s.tracer
 }
 
-func (s *spanImpl) Context() Context {
-	return s.raw.Context
+func (s *spanImpl) SpanContext() opentracing.SpanContext {
+	return &s.raw.SpanContext
 }
 
 func (s *spanImpl) Operation() string {

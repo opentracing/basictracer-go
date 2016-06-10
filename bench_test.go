@@ -26,7 +26,7 @@ func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
 		sp.SetTag(tags[j], nil)
 	}
 	for j := 0; j < numItems; j++ {
-		sp.SetBaggageItem(tags[j], tags[j])
+		sp.SpanContext().SetBaggageItem(tags[j], tags[j])
 	}
 }
 
@@ -108,7 +108,7 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := tracer.Inject(sp, format, carrier)
+		err := tracer.Inject(sp.SpanContext(), format, carrier)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -129,7 +129,7 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 	default:
 		b.Fatalf("unhandled format %d", format)
 	}
-	if err := tracer.Inject(sp, format, carrier); err != nil {
+	if err := tracer.Inject(sp.SpanContext(), format, carrier); err != nil {
 		b.Fatal(err)
 	}
 

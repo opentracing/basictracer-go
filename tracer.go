@@ -154,20 +154,20 @@ func (t *tracerImpl) StartSpanWithOptions(
 		sp.raw.TraceID, sp.raw.SpanID = randomID2()
 		sp.raw.Sampled = t.options.ShouldSample(sp.raw.TraceID)
 	} else {
-		pr := opts.Parent.(*spanImpl)
-		sp.raw.TraceID = pr.raw.TraceID
+		pc := opts.Parent.(*SpanContext)
+		sp.raw.TraceID = pc.TraceID
 		sp.raw.SpanID = randomID()
-		sp.raw.ParentSpanID = pr.raw.SpanID
-		sp.raw.Sampled = pr.raw.Sampled
+		sp.raw.ParentSpanID = pc.SpanID
+		sp.raw.Sampled = pc.Sampled
 
-		pr.Lock()
-		if l := len(pr.raw.Baggage); l > 0 {
-			sp.raw.Baggage = make(map[string]string, len(pr.raw.Baggage))
-			for k, v := range pr.raw.Baggage {
+		pc.baggageLock.Lock()
+		if l := len(pc.Baggage); l > 0 {
+			sp.raw.Baggage = make(map[string]string, len(pc.Baggage))
+			for k, v := range pc.Baggage {
 				sp.raw.Baggage[k] = v
 			}
 		}
-		pr.Unlock()
+		pc.baggageLock.Unlock()
 	}
 
 	return t.startSpanInternal(
@@ -202,15 +202,15 @@ type delegatorType struct{}
 // Delegator is the format to use for DelegatingCarrier.
 var Delegator delegatorType
 
-func (t *tracerImpl) Inject(sp opentracing.Span, format interface{}, carrier interface{}) error {
+func (t *tracerImpl) Inject(sc opentracing.SpanContext, format interface{}, carrier interface{}) error {
 	switch format {
 	case opentracing.TextMap:
-		return t.textPropagator.Inject(sp, carrier)
+		return t.textPropagator.Inject(sc, carrier)
 	case opentracing.Binary:
-		return t.binaryPropagator.Inject(sp, carrier)
+		return t.binaryPropagator.Inject(sc, carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
-		return t.accessorPropagator.Inject(sp, carrier)
+		return t.accessorPropagator.Inject(sc, carrier)
 	}
 	return opentracing.ErrUnsupportedFormat
 }

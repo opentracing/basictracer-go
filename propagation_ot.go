@@ -30,10 +30,10 @@ const (
 )
 
 func (p *textMapPropagator) Inject(
-	sp opentracing.Span,
+	spanContext opentracing.SpanContext,
 	opaqueCarrier interface{},
 ) error {
-	sc, ok := sp.(*spanImpl)
+	sc, ok := spanContext.(*SpanContext)
 	if !ok {
 		return opentracing.ErrInvalidSpan
 	}
@@ -41,15 +41,15 @@ func (p *textMapPropagator) Inject(
 	if !ok {
 		return opentracing.ErrInvalidCarrier
 	}
-	carrier.Set(fieldNameTraceID, strconv.FormatUint(sc.raw.TraceID, 16))
-	carrier.Set(fieldNameSpanID, strconv.FormatUint(sc.raw.SpanID, 16))
-	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.raw.Sampled))
+	carrier.Set(fieldNameTraceID, strconv.FormatUint(sc.TraceID, 16))
+	carrier.Set(fieldNameSpanID, strconv.FormatUint(sc.SpanID, 16))
+	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.Sampled))
 
-	sc.Lock()
-	for k, v := range sc.raw.Baggage {
+	sc.baggageLock.Lock()
+	for k, v := range sc.Baggage {
 		carrier.Set(prefixBaggage+k, v)
 	}
-	sc.Unlock()
+	sc.baggageLock.Unlock()
 	return nil
 }
 
@@ -106,13 +106,13 @@ func (p *textMapPropagator) Join(
 
 	sp := p.tracer.getSpan()
 	sp.raw = RawSpan{
-		Context: Context{
-			TraceID:      traceID,
-			SpanID:       randomID(),
-			ParentSpanID: propagatedSpanID,
-			Sampled:      sampled,
+		ParentSpanID: propagatedSpanID,
+		SpanContext: SpanContext{
+			TraceID: traceID,
+			SpanID:  randomID(),
+			Sampled: sampled,
+			Baggage: decodedBaggage,
 		},
-		Baggage: decodedBaggage,
 	}
 
 	return p.tracer.startSpanInternal(
@@ -124,10 +124,10 @@ func (p *textMapPropagator) Join(
 }
 
 func (p *binaryPropagator) Inject(
-	sp opentracing.Span,
+	spanContext opentracing.SpanContext,
 	opaqueCarrier interface{},
 ) error {
-	sc, ok := sp.(*spanImpl)
+	sc, ok := spanContext.(*SpanContext)
 	if !ok {
 		return opentracing.ErrInvalidSpan
 	}
@@ -137,10 +137,10 @@ func (p *binaryPropagator) Inject(
 	}
 
 	state := wire.TracerState{}
-	state.TraceId = sc.raw.TraceID
-	state.SpanId = sc.raw.SpanID
-	state.Sampled = sc.raw.Sampled
-	state.BaggageItems = sc.raw.Baggage
+	state.TraceId = sc.TraceID
+	state.SpanId = sc.SpanID
+	state.Sampled = sc.Sampled
+	state.BaggageItems = sc.Baggage
 
 	b, err := proto.Marshal(&state)
 	if err != nil {
@@ -189,15 +189,14 @@ func (p *binaryPropagator) Join(
 
 	sp := p.tracer.getSpan()
 	sp.raw = RawSpan{
-		Context: Context{
-			TraceID:      ctx.TraceId,
-			SpanID:       randomID(),
-			ParentSpanID: ctx.SpanId,
-			Sampled:      ctx.Sampled,
+		ParentSpanID: ctx.SpanId,
+		SpanContext: SpanContext{
+			TraceID: ctx.TraceId,
+			SpanID:  randomID(),
+			Sampled: ctx.Sampled,
+			Baggage: ctx.BaggageItems,
 		},
 	}
-
-	sp.raw.Baggage = ctx.BaggageItems
 
 	return p.tracer.startSpanInternal(
 		sp,

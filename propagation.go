@@ -21,21 +21,20 @@ type DelegatingCarrier interface {
 }
 
 func (p *accessorPropagator) Inject(
-	sp opentracing.Span,
+	spanContext opentracing.SpanContext,
 	carrier interface{},
 ) error {
-	ac, ok := carrier.(DelegatingCarrier)
-	if !ok || ac == nil {
+	dc, ok := carrier.(DelegatingCarrier)
+	if !ok || dc == nil {
 		return opentracing.ErrInvalidCarrier
 	}
-	si, ok := sp.(*spanImpl)
+	sc, ok := spanContext.(*SpanContext)
 	if !ok {
 		return opentracing.ErrInvalidSpan
 	}
-	meta := si.raw.Context
-	ac.SetState(meta.TraceID, meta.SpanID, meta.Sampled)
-	for k, v := range si.raw.Baggage {
-		ac.SetBaggageItem(k, v)
+	dc.SetState(sc.TraceID, sc.SpanID, sc.Sampled)
+	for k, v := range sc.Baggage {
+		dc.SetBaggageItem(k, v)
 	}
 	return nil
 }
@@ -44,26 +43,26 @@ func (p *accessorPropagator) Join(
 	operationName string,
 	carrier interface{},
 ) (opentracing.Span, error) {
-	ac, ok := carrier.(DelegatingCarrier)
-	if !ok || ac == nil {
+	dc, ok := carrier.(DelegatingCarrier)
+	if !ok || dc == nil {
 		return nil, opentracing.ErrInvalidCarrier
 	}
 
 	sp := p.tracer.getSpan()
-	ac.GetBaggage(func(k, v string) {
+	traceID, parentSpanID, sampled := dc.State()
+	sp.raw.ParentSpanID = parentSpanID
+	sp.raw.SpanContext = SpanContext{
+		TraceID: traceID,
+		SpanID:  randomID(),
+		Sampled: sampled,
+		Baggage: nil, // initialized just below.
+	}
+	dc.GetBaggage(func(k, v string) {
 		if sp.raw.Baggage == nil {
 			sp.raw.Baggage = map[string]string{}
 		}
 		sp.raw.Baggage[k] = v
 	})
-
-	traceID, parentSpanID, sampled := ac.State()
-	sp.raw.Context = Context{
-		TraceID:      traceID,
-		SpanID:       randomID(),
-		ParentSpanID: parentSpanID,
-		Sampled:      sampled,
-	}
 
 	return p.tracer.startSpanInternal(
 		sp,

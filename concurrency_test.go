@@ -85,9 +85,11 @@ func TestConcurrentUsage(t *testing.T) {
 				sp.SetTag("foo", "bar")
 				sp.SpanContext().SetBaggageItem("boo", "far")
 				sp.SetOperationName("x")
-				csp := tracer.StartSpanWithOptions(opentracing.StartSpanOptions{
-					Parent: sp.SpanContext(),
-				})
+				csp := tracer.StartSpan(
+					"csp",
+					opentracing.Reference(
+						opentracing.RefBlockedParent,
+						sp.SpanContext()))
 				csp.Finish()
 				defer sp.Finish()
 			}
@@ -105,9 +107,8 @@ func TestDisableSpanPool(t *testing.T) {
 	parent := tracer.StartSpan("parent")
 	parent.Finish()
 	// This shouldn't panic.
-	child := tracer.StartSpanWithOptions(opentracing.StartSpanOptions{
-		Parent:        parent.SpanContext(),
-		OperationName: "child",
-	})
+	child := tracer.StartSpan(
+		"child",
+		opentracing.Reference(opentracing.RefBlockedParent, parent.SpanContext()))
 	child.Finish()
 }

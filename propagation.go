@@ -1,10 +1,6 @@
 package basictracer
 
-import (
-	"time"
-
-	opentracing "github.com/opentracing/opentracing-go"
-)
+import opentracing "github.com/opentracing/opentracing-go"
 
 type accessorPropagator struct {
 	tracer *tracerImpl
@@ -30,7 +26,7 @@ func (p *accessorPropagator) Inject(
 	}
 	sc, ok := spanContext.(*SpanContext)
 	if !ok {
-		return opentracing.ErrInvalidSpan
+		return opentracing.ErrInvalidSpanContext
 	}
 	dc.SetState(sc.TraceID, sc.SpanID, sc.Sampled)
 	for k, v := range sc.Baggage {
@@ -39,35 +35,27 @@ func (p *accessorPropagator) Inject(
 	return nil
 }
 
-func (p *accessorPropagator) Join(
-	operationName string,
+func (p *accessorPropagator) Extract(
 	carrier interface{},
-) (opentracing.Span, error) {
+) (opentracing.SpanContext, error) {
 	dc, ok := carrier.(DelegatingCarrier)
 	if !ok || dc == nil {
 		return nil, opentracing.ErrInvalidCarrier
 	}
 
-	sp := p.tracer.getSpan()
-	traceID, parentSpanID, sampled := dc.State()
-	sp.raw.ParentSpanID = parentSpanID
-	sp.raw.SpanContext = SpanContext{
+	traceID, spanID, sampled := dc.State()
+	sc := &SpanContext{
 		TraceID: traceID,
-		SpanID:  randomID(),
+		SpanID:  spanID,
 		Sampled: sampled,
-		Baggage: nil, // initialized just below.
+		Baggage: nil,
 	}
 	dc.GetBaggage(func(k, v string) {
-		if sp.raw.Baggage == nil {
-			sp.raw.Baggage = map[string]string{}
+		if sc.Baggage == nil {
+			sc.Baggage = map[string]string{}
 		}
-		sp.raw.Baggage[k] = v
+		sc.Baggage[k] = v
 	})
 
-	return p.tracer.startSpanInternal(
-		sp,
-		operationName,
-		time.Now(),
-		nil,
-	), nil
+	return sc, nil
 }

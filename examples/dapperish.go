@@ -56,11 +56,14 @@ func client() {
 func server() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		textCarrier := opentracing.HTTPHeaderTextMapCarrier(req.Header)
-		serverSpan, err := opentracing.GlobalTracer().Join(
-			"serverSpan", opentracing.TextMap, textCarrier)
+		wireSpanContext, err := opentracing.GlobalTracer().Extract(
+			opentracing.TextMap, textCarrier)
 		if err != nil {
 			panic(err)
 		}
+		serverSpan := opentracing.GlobalTracer().StartSpan(
+			"serverSpan",
+			opentracing.Reference(opentracing.RefRPCClient, wireSpanContext))
 		serverSpan.SetTag("component", "server")
 		defer serverSpan.Finish()
 

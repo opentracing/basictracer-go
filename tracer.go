@@ -119,11 +119,15 @@ type tracerImpl struct {
 
 func (t *tracerImpl) StartSpan(
 	operationName string,
+	opts ...opentracing.StartSpanOption,
 ) opentracing.Span {
-	return t.StartSpanWithOptions(
-		opentracing.StartSpanOptions{
-			OperationName: operationName,
-		})
+	sso := opentracing.StartSpanOptions{
+		OperationName: operationName,
+	}
+	for _, o := range opts {
+		o(&sso)
+	}
+	return t.StartSpanWithOptions(sso)
 }
 
 func (t *tracerImpl) getSpan() *spanImpl {
@@ -150,11 +154,11 @@ func (t *tracerImpl) StartSpanWithOptions(
 	// Build the new span. This is the only allocation: We'll return this as
 	// a opentracing.Span.
 	sp := t.getSpan()
-	if opts.Parent == nil {
+	if len(opts.CausalReferences) == 0 {
 		sp.raw.TraceID, sp.raw.SpanID = randomID2()
 		sp.raw.Sampled = t.options.ShouldSample(sp.raw.TraceID)
 	} else {
-		pc := opts.Parent.(*SpanContext)
+		pc := opts.CausalReferences[0].SpanContext.(*SpanContext)
 		sp.raw.TraceID = pc.TraceID
 		sp.raw.SpanID = randomID()
 		sp.raw.ParentSpanID = pc.SpanID
@@ -215,15 +219,15 @@ func (t *tracerImpl) Inject(sc opentracing.SpanContext, format interface{}, carr
 	return opentracing.ErrUnsupportedFormat
 }
 
-func (t *tracerImpl) Join(operationName string, format interface{}, carrier interface{}) (opentracing.Span, error) {
+func (t *tracerImpl) Extract(format interface{}, carrier interface{}) (opentracing.SpanContext, error) {
 	switch format {
 	case opentracing.TextMap:
-		return t.textPropagator.Join(operationName, carrier)
+		return t.textPropagator.Extract(carrier)
 	case opentracing.Binary:
-		return t.binaryPropagator.Join(operationName, carrier)
+		return t.binaryPropagator.Extract(carrier)
 	}
 	if _, ok := format.(delegatorType); ok {
-		return t.accessorPropagator.Join(operationName, carrier)
+		return t.accessorPropagator.Extract(carrier)
 	}
 	return nil, opentracing.ErrUnsupportedFormat
 }

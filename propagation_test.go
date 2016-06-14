@@ -58,10 +58,13 @@ func TestSpanPropagator(t *testing.T) {
 		if err := tracer.Inject(sp.SpanContext(), test.typ, test.carrier); err != nil {
 			t.Fatalf("%d: %v", i, err)
 		}
-		child, err := tracer.Join(op, test.typ, test.carrier)
+		injectedContext, err := tracer.Extract(test.typ, test.carrier)
 		if err != nil {
 			t.Fatalf("%d: %v", i, err)
 		}
+		child := tracer.StartSpan(
+			op,
+			opentracing.Reference(opentracing.RefBlockedParent, injectedContext))
 		child.Finish()
 	}
 	sp.Finish()

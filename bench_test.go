@@ -115,7 +115,7 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	}
 }
 
-func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
+func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
 	var r CountingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
@@ -133,8 +133,8 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 		b.Fatal(err)
 	}
 
-	// We create a new bytes.Buffer every time for tracer.Join() to keep this
-	// benchmark realistic.
+	// We create a new bytes.Buffer every time for tracer.Extract() to keep
+	// this benchmark realistic.
 	var rawBinaryBytes []byte
 	if format == opentracing.Binary {
 		rawBinaryBytes = carrier.(*bytes.Buffer).Bytes()
@@ -144,11 +144,10 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 		if format == opentracing.Binary {
 			carrier = bytes.NewBuffer(rawBinaryBytes)
 		}
-		sp, err := tracer.Join("benchmark", format, carrier)
+		_, err := tracer.Extract(format, carrier)
 		if err != nil {
 			b.Fatal(err)
 		}
-		sp.Finish() // feed back into buffer pool
 	}
 }
 
@@ -169,17 +168,17 @@ func BenchmarkInject_Binary_100BaggageItems(b *testing.B) {
 }
 
 func BenchmarkJoin_TextMap_Empty(b *testing.B) {
-	benchmarkJoin(b, opentracing.TextMap, 0)
+	benchmarkExtract(b, opentracing.TextMap, 0)
 }
 
 func BenchmarkJoin_TextMap_100BaggageItems(b *testing.B) {
-	benchmarkJoin(b, opentracing.TextMap, 100)
+	benchmarkExtract(b, opentracing.TextMap, 100)
 }
 
 func BenchmarkJoin_Binary_Empty(b *testing.B) {
-	benchmarkJoin(b, opentracing.Binary, 0)
+	benchmarkExtract(b, opentracing.Binary, 0)
 }
 
 func BenchmarkJoin_Binary_100BaggageItems(b *testing.B) {
-	benchmarkJoin(b, opentracing.Binary, 100)
+	benchmarkExtract(b, opentracing.Binary, 100)
 }

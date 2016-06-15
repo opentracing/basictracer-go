@@ -121,13 +121,11 @@ func (t *tracerImpl) StartSpan(
 	operationName string,
 	opts ...opentracing.StartSpanOption,
 ) opentracing.Span {
-	sso := opentracing.StartSpanOptions{
-		OperationName: operationName,
-	}
+	sso := opentracing.StartSpanOptions{}
 	for _, o := range opts {
 		o(&sso)
 	}
-	return t.StartSpanWithOptions(sso)
+	return t.StartSpanWithOptions(operationName, sso)
 }
 
 func (t *tracerImpl) getSpan() *spanImpl {
@@ -140,6 +138,7 @@ func (t *tracerImpl) getSpan() *spanImpl {
 }
 
 func (t *tracerImpl) StartSpanWithOptions(
+	operationName string,
 	opts opentracing.StartSpanOptions,
 ) opentracing.Span {
 	// Start time.
@@ -176,7 +175,7 @@ func (t *tracerImpl) StartSpanWithOptions(
 
 	return t.startSpanInternal(
 		sp,
-		opts.OperationName,
+		operationName,
 		startTime,
 		tags,
 	)

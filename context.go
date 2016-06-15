@@ -22,6 +22,7 @@ type SpanContext struct {
 	Baggage     map[string]string // initialized on first use
 }
 
+// BaggageItem belongs to the opentracing.SpanContext interface
 func (c *SpanContext) BaggageItem(key string) string {
 	// TODO: if we want to support onBaggage, need a pointer to the bt.Span.
 	//   s.onBaggage(canonicalKey, val)
@@ -38,6 +39,7 @@ func (c *SpanContext) BaggageItem(key string) string {
 	return c.Baggage[key]
 }
 
+// SetBaggageItem belongs to the opentracing.SpanContext interface
 func (c *SpanContext) SetBaggageItem(key, val string) opentracing.SpanContext {
 	c.baggageLock.Lock()
 	defer c.baggageLock.Unlock()

@@ -185,7 +185,11 @@ func (t *tracerImpl) startSpanInternal(
 	tags opentracing.Tags,
 ) opentracing.Span {
 	sp.tracer = t
-	sp.event = t.options.NewSpanEventListener()
+	if t.options.NewSpanEventListener == nil {
+		sp.event = DefaultOptions().NewSpanEventListener()
+	} else {
+		sp.event = t.options.NewSpanEventListener()
+	}
 	sp.raw.Operation = operationName
 	sp.raw.Start = startTime
 	sp.raw.Duration = -1

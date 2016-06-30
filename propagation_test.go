@@ -40,7 +40,10 @@ func (vc *verbatimCarrier) State() (traceID, spanID uint64, sampled bool) {
 func TestSpanPropagator(t *testing.T) {
 	const op = "test"
 	recorder := basictracer.NewInMemoryRecorder()
-	tracer := basictracer.New(recorder)
+	tracer := basictracer.NewWithOptions(basictracer.Options{
+		Recorder:     recorder,
+		ShouldSample: func(traceID uint64) bool { return true },
+	})
 
 	sp := tracer.StartSpan(op)
 	sp.SetBaggageItem("foo", "bar")

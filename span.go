@@ -74,8 +74,10 @@ func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
 	s.Lock()
 	defer s.Unlock()
 	if key == string(ext.SamplingPriority) {
-		s.raw.Sampled = true
-		return s
+		if v, ok := value.(uint16); ok {
+			s.raw.Sampled = v != 0
+			return s
+		}
 	}
 	if s.trim() {
 		return s
@@ -135,7 +137,9 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	s.raw.Duration = duration
 
 	s.onFinish(s.raw)
-	s.tracer.options.Recorder.RecordSpan(s.raw)
+	if s.raw.Sampled {
+		s.tracer.options.Recorder.RecordSpan(s.raw)
+	}
 
 	// Last chance to get options before the span is possbily reset.
 	poolEnabled := s.tracer.options.EnableSpanPool
@@ -180,6 +184,16 @@ func (s *spanImpl) BaggageItem(restrictedKey string) string {
 	defer s.Unlock()
 
 	return s.raw.Baggage[canonicalKey]
+}
+
+func (s *spanImpl) ForeachBaggageItem(handler func(k, v string) bool) {
+	s.Lock()
+	defer s.Unlock()
+	for k, v := range s.raw.Baggage {
+		if !handler(k, v) {
+			break
+		}
+	}
 }
 
 func (s *spanImpl) Tracer() opentracing.Tracer {

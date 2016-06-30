@@ -32,7 +32,9 @@ func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
 
 func benchmarkWithOps(b *testing.B, numEvent, numTag, numItems int) {
 	var r CountingRecorder
-	t := New(&r)
+	t := NewWithOptions(Options{
+		Recorder: &r,
+		ShouldSample: func(traceID uint64) bool { return true }})
 	benchmarkWithOpsAndCB(b, func() opentracing.Span {
 		return t.StartSpan("test")
 	}, numEvent, numTag, numItems)
@@ -87,8 +89,8 @@ func BenchmarkTrimmedSpan_100Events_100Tags_100BaggageItems(b *testing.B) {
 		sp := t.StartSpan("test")
 		return sp
 	}, 100, 100, 100)
-	if int(r) != b.N {
-		b.Fatalf("missing traces: expected %d, got %d", b.N, r)
+	if int(r) != 0 {
+		b.Fatalf("extraneous traces: expected 0, got %d", r)
 	}
 }
 

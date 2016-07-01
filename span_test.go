@@ -52,13 +52,13 @@ func TestSpan_Sampling(t *testing.T) {
 	})
 	span := tracer.StartSpan("x")
 	span.Finish()
-	assert.Equal(t, 1, len(recorder.GetSpans()), "by default span should be sampled")
+	assert.Equal(t, 1, len(recorder.GetSampledSpans()), "by default span should be sampled")
 
 	recorder.Reset()
 	span = tracer.StartSpan("x")
 	ext.SamplingPriority.Set(span, 0)
 	span.Finish()
-	assert.Equal(t, 0, len(recorder.GetSpans()), "SamplingPriority=0 should turn off sampling")
+	assert.Equal(t, 0, len(recorder.GetSampledSpans()), "SamplingPriority=0 should turn off sampling")
 
 	tracer = NewWithOptions(Options{
 		Recorder:     recorder,
@@ -68,11 +68,11 @@ func TestSpan_Sampling(t *testing.T) {
 	recorder.Reset()
 	span = tracer.StartSpan("x")
 	span.Finish()
-	assert.Equal(t, 0, len(recorder.GetSpans()), "by default span should not be sampled")
+	assert.Equal(t, 0, len(recorder.GetSampledSpans()), "by default span should not be sampled")
 
 	recorder.Reset()
 	span = tracer.StartSpan("x")
 	ext.SamplingPriority.Set(span, 1)
 	span.Finish()
-	assert.Equal(t, 1, len(recorder.GetSpans()), "SamplingPriority=1 should turn on sampling")
+	assert.Equal(t, 1, len(recorder.GetSampledSpans()), "SamplingPriority=1 should turn on sampling")
 }

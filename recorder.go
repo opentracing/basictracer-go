@@ -39,6 +39,19 @@ func (r *InMemorySpanRecorder) GetSpans() []RawSpan {
 	return spans
 }
 
+// GetSampledSpans returns a slice of spans accumulated so far which were sampled.
+func (r *InMemorySpanRecorder) GetSampledSpans() []RawSpan {
+	r.RLock()
+	defer r.RUnlock()
+	spans := make([]RawSpan, 0, len(r.spans))
+	for _, span := range r.spans {
+		if span.Sampled {
+			spans = append(spans, span)
+		}
+	}
+	return spans
+}
+
 // Reset clears the internal array of spans.
 func (r *InMemorySpanRecorder) Reset() {
 	r.Lock()

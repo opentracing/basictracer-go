@@ -137,9 +137,7 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	s.raw.Duration = duration
 
 	s.onFinish(s.raw)
-	if s.raw.Sampled {
-		s.tracer.options.Recorder.RecordSpan(s.raw)
-	}
+	s.tracer.options.Recorder.RecordSpan(s.raw)
 
 	// Last chance to get options before the span is possbily reset.
 	poolEnabled := s.tracer.options.EnableSpanPool

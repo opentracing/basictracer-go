@@ -84,10 +84,9 @@ type Options struct {
 // all options disabled. A Recorder needs to be set manually before using the
 // returned object with a Tracer.
 func DefaultOptions() Options {
-	var opts Options
-	opts.ShouldSample = func(traceID uint64) bool { return traceID%64 == 0 }
-	opts.NewSpanEventListener = func() func(SpanEvent) { return nil }
-	return opts
+	return Options{
+		ShouldSample: func(traceID uint64) bool { return traceID%64 == 0 },
+	}
 }
 
 // NewWithOptions creates a customized Tracer.
@@ -185,9 +184,7 @@ func (t *tracerImpl) startSpanInternal(
 	tags opentracing.Tags,
 ) opentracing.Span {
 	sp.tracer = t
-	if t.options.NewSpanEventListener == nil {
-		sp.event = DefaultOptions().NewSpanEventListener()
-	} else {
+	if t.options.NewSpanEventListener != nil {
 		sp.event = t.options.NewSpanEventListener()
 	}
 	sp.raw.Operation = operationName

@@ -74,8 +74,10 @@ func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
 	s.Lock()
 	defer s.Unlock()
 	if key == string(ext.SamplingPriority) {
-		s.raw.Sampled = true
-		return s
+		if v, ok := value.(uint16); ok {
+			s.raw.Sampled = v != 0
+			return s
+		}
 	}
 	if s.trim() {
 		return s

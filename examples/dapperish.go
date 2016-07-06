@@ -11,17 +11,20 @@ import (
 	"runtime"
 	"strings"
 
+	"golang.org/x/net/context"
+
 	"github.com/opentracing/basictracer-go/examples/dapperish"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 )
 
 func client() {
 	reader := bufio.NewReader(os.Stdin)
 	for {
 		span := opentracing.StartSpan("getInput")
-		ctx := opentracing.BackgroundContextWithSpan(span)
+		ctx := opentracing.ContextWithSpan(context.Background(), span)
 		// Make sure that global baggage propagation works.
-		span.SetBaggageItem("User", os.Getenv("USER"))
+		span.Context().SetBaggageItem("User", os.Getenv("USER"))
 		span.LogEventWithPayload("ctx", ctx)
 		fmt.Print("\n\nEnter text (empty string to exit): ")
 		text, _ := reader.ReadString('\n')
@@ -36,7 +39,7 @@ func client() {
 		httpClient := &http.Client{}
 		httpReq, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewReader([]byte(text)))
 		textCarrier := opentracing.HTTPHeaderTextMapCarrier(httpReq.Header)
-		err := span.Tracer().Inject(span, opentracing.TextMap, textCarrier)
+		err := span.Tracer().Inject(span.Context(), opentracing.TextMap, textCarrier)
 		if err != nil {
 			panic(err)
 		}
@@ -54,11 +57,14 @@ func client() {
 func server() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		textCarrier := opentracing.HTTPHeaderTextMapCarrier(req.Header)
-		serverSpan, err := opentracing.GlobalTracer().Join(
-			"serverSpan", opentracing.TextMap, textCarrier)
+		wireSpanContext, err := opentracing.GlobalTracer().Extract(
+			opentracing.TextMap, textCarrier)
 		if err != nil {
 			panic(err)
 		}
+		serverSpan := opentracing.GlobalTracer().StartSpan(
+			"serverSpan",
+			ext.RPCServerOption(wireSpanContext))
 		serverSpan.SetTag("component", "server")
 		defer serverSpan.Finish()
 

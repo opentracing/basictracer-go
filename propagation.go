@@ -1,10 +1,6 @@
 package basictracer
 
-import (
-	"time"
-
-	opentracing "github.com/opentracing/opentracing-go"
-)
+import opentracing "github.com/opentracing/opentracing-go"
 
 type accessorPropagator struct {
 	tracer *tracerImpl
@@ -21,54 +17,45 @@ type DelegatingCarrier interface {
 }
 
 func (p *accessorPropagator) Inject(
-	sp opentracing.Span,
+	spanContext opentracing.SpanContext,
 	carrier interface{},
 ) error {
-	ac, ok := carrier.(DelegatingCarrier)
-	if !ok || ac == nil {
+	dc, ok := carrier.(DelegatingCarrier)
+	if !ok || dc == nil {
 		return opentracing.ErrInvalidCarrier
 	}
-	si, ok := sp.(*spanImpl)
+	sc, ok := spanContext.(*SpanContext)
 	if !ok {
-		return opentracing.ErrInvalidSpan
+		return opentracing.ErrInvalidSpanContext
 	}
-	meta := si.raw.Context
-	ac.SetState(meta.TraceID, meta.SpanID, meta.Sampled)
-	for k, v := range si.raw.Baggage {
-		ac.SetBaggageItem(k, v)
+	dc.SetState(sc.TraceID, sc.SpanID, sc.Sampled)
+	for k, v := range sc.Baggage {
+		dc.SetBaggageItem(k, v)
 	}
 	return nil
 }
 
-func (p *accessorPropagator) Join(
-	operationName string,
+func (p *accessorPropagator) Extract(
 	carrier interface{},
-) (opentracing.Span, error) {
-	ac, ok := carrier.(DelegatingCarrier)
-	if !ok || ac == nil {
+) (opentracing.SpanContext, error) {
+	dc, ok := carrier.(DelegatingCarrier)
+	if !ok || dc == nil {
 		return nil, opentracing.ErrInvalidCarrier
 	}
 
-	sp := p.tracer.getSpan()
-	ac.GetBaggage(func(k, v string) {
-		if sp.raw.Baggage == nil {
-			sp.raw.Baggage = map[string]string{}
+	traceID, spanID, sampled := dc.State()
+	sc := &SpanContext{
+		TraceID: traceID,
+		SpanID:  spanID,
+		Sampled: sampled,
+		Baggage: nil,
+	}
+	dc.GetBaggage(func(k, v string) {
+		if sc.Baggage == nil {
+			sc.Baggage = map[string]string{}
 		}
-		sp.raw.Baggage[k] = v
+		sc.Baggage[k] = v
 	})
 
-	traceID, parentSpanID, sampled := ac.State()
-	sp.raw.Context = Context{
-		TraceID:      traceID,
-		SpanID:       randomID(),
-		ParentSpanID: parentSpanID,
-		Sampled:      sampled,
-	}
-
-	return p.tracer.startSpanInternal(
-		sp,
-		operationName,
-		time.Now(),
-		nil,
-	), nil
+	return sc, nil
 }

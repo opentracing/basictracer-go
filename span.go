@@ -1,7 +1,6 @@
 package basictracer
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -14,9 +13,6 @@ import (
 // to (*opentracing.Span).Finish().
 type Span interface {
 	opentracing.Span
-
-	// Context contains trace identifiers
-	Context() Context
 
 	// Operation names the work done by this span instance
 	Operation() string
@@ -44,18 +40,20 @@ func (s *spanImpl) reset() {
 	// (the recorder) needs to make sure that they're not holding on to the
 	// baggage or logs when they return (i.e. they need to copy if they care):
 	//
-	// logs, baggage := s.raw.Logs[:0], s.raw.Baggage
-	// for k := range baggage {
-	// 	delete(baggage, k)
-	// }
-	// s.raw.Logs, s.raw.Baggage = logs, baggage
+	//     logs, baggage := s.raw.Logs[:0], s.raw.Baggage
+	//     for k := range baggage {
+	//         delete(baggage, k)
+	//     }
+	//     s.raw.Logs, s.raw.Baggage = logs, baggage
 	//
 	// That's likely too much to ask for. But there is some magic we should
 	// be able to do with `runtime.SetFinalizer` to reclaim that memory into
 	// a buffer pool when GC considers them unreachable, which should ease
 	// some of the load. Hard to say how quickly that would be in practice
 	// though.
-	s.raw = RawSpan{}
+	s.raw = RawSpan{
+		SpanContext: &SpanContext{},
+	}
 }
 
 func (s *spanImpl) SetOperationName(operationName string) opentracing.Span {
@@ -152,54 +150,12 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 	}
 }
 
-func (s *spanImpl) SetBaggageItem(restrictedKey, val string) opentracing.Span {
-	canonicalKey, valid := opentracing.CanonicalizeBaggageKey(restrictedKey)
-	if !valid {
-		panic(fmt.Errorf("Invalid key: %q", restrictedKey))
-	}
-
-	s.Lock()
-	defer s.Unlock()
-	s.onBaggage(canonicalKey, val)
-	if s.trim() {
-		return s
-	}
-
-	if s.raw.Baggage == nil {
-		s.raw.Baggage = make(map[string]string)
-	}
-	s.raw.Baggage[canonicalKey] = val
-	return s
-}
-
-func (s *spanImpl) BaggageItem(restrictedKey string) string {
-	canonicalKey, valid := opentracing.CanonicalizeBaggageKey(restrictedKey)
-	if !valid {
-		panic(fmt.Errorf("Invalid key: %q", restrictedKey))
-	}
-
-	s.Lock()
-	defer s.Unlock()
-
-	return s.raw.Baggage[canonicalKey]
-}
-
-func (s *spanImpl) ForeachBaggageItem(handler func(k, v string) bool) {
-	s.Lock()
-	defer s.Unlock()
-	for k, v := range s.raw.Baggage {
-		if !handler(k, v) {
-			break
-		}
-	}
-}
-
 func (s *spanImpl) Tracer() opentracing.Tracer {
 	return s.tracer
 }
 
-func (s *spanImpl) Context() Context {
-	return s.raw.Context
+func (s *spanImpl) Context() opentracing.SpanContext {
+	return s.raw.SpanContext
 }
 
 func (s *spanImpl) Operation() string {

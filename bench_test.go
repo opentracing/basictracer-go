@@ -26,7 +26,7 @@ func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
 		sp.SetTag(tags[j], nil)
 	}
 	for j := 0; j < numItems; j++ {
-		sp.SetBaggageItem(tags[j], tags[j])
+		sp.Context().SetBaggageItem(tags[j], tags[j])
 	}
 }
 
@@ -108,14 +108,14 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := tracer.Inject(sp, format, carrier)
+		err := tracer.Inject(sp.Context(), format, carrier)
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
 }
 
-func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
+func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numItems int) {
 	var r CountingRecorder
 	tracer := New(&r)
 	sp := tracer.StartSpan("testing")
@@ -129,12 +129,12 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 	default:
 		b.Fatalf("unhandled format %d", format)
 	}
-	if err := tracer.Inject(sp, format, carrier); err != nil {
+	if err := tracer.Inject(sp.Context(), format, carrier); err != nil {
 		b.Fatal(err)
 	}
 
-	// We create a new bytes.Buffer every time for tracer.Join() to keep this
-	// benchmark realistic.
+	// We create a new bytes.Buffer every time for tracer.Extract() to keep
+	// this benchmark realistic.
 	var rawBinaryBytes []byte
 	if format == opentracing.Binary {
 		rawBinaryBytes = carrier.(*bytes.Buffer).Bytes()
@@ -144,11 +144,10 @@ func benchmarkJoin(b *testing.B, format opentracing.BuiltinFormat, numItems int)
 		if format == opentracing.Binary {
 			carrier = bytes.NewBuffer(rawBinaryBytes)
 		}
-		sp, err := tracer.Join("benchmark", format, carrier)
+		_, err := tracer.Extract(format, carrier)
 		if err != nil {
 			b.Fatal(err)
 		}
-		sp.Finish() // feed back into buffer pool
 	}
 }
 
@@ -169,17 +168,17 @@ func BenchmarkInject_Binary_100BaggageItems(b *testing.B) {
 }
 
 func BenchmarkJoin_TextMap_Empty(b *testing.B) {
-	benchmarkJoin(b, opentracing.TextMap, 0)
+	benchmarkExtract(b, opentracing.TextMap, 0)
 }
 
 func BenchmarkJoin_TextMap_100BaggageItems(b *testing.B) {
-	benchmarkJoin(b, opentracing.TextMap, 100)
+	benchmarkExtract(b, opentracing.TextMap, 100)
 }
 
 func BenchmarkJoin_Binary_Empty(b *testing.B) {
-	benchmarkJoin(b, opentracing.Binary, 0)
+	benchmarkExtract(b, opentracing.Binary, 0)
 }
 
 func BenchmarkJoin_Binary_100BaggageItems(b *testing.B) {
-	benchmarkJoin(b, opentracing.Binary, 100)
+	benchmarkExtract(b, opentracing.Binary, 100)
 }

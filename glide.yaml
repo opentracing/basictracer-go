@@ -1,0 +1,13 @@
+package: github.com/opentracing/basictracer-go
+import:
+- package: github.com/gogo/protobuf
+  version: ^0.2.0
+  subpackages:
+  - proto
+- package: github.com/opentracing/opentracing-go
+  subpackages:
+  - ext
+- package: golang.org/x/net
+  subpackages:
+  - context
+  - trace

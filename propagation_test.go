@@ -45,12 +45,13 @@ func TestSpanPropagator(t *testing.T) {
 	sp := tracer.StartSpan(op)
 	sp.Context().SetBaggageItem("foo", "bar")
 
-	tmc := opentracing.HTTPHeaderTextMapCarrier(http.Header{})
+	tmc := opentracing.HTTPHeadersCarrier(http.Header{})
 	tests := []struct {
 		typ, carrier interface{}
 	}{
 		{basictracer.Delegator, basictracer.DelegatingCarrier(&verbatimCarrier{b: map[string]string{}})},
 		{opentracing.Binary, &bytes.Buffer{}},
+		{opentracing.HTTPHeaders, tmc},
 		{opentracing.TextMap, tmc},
 	}
 

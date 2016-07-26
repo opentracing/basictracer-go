@@ -27,10 +27,11 @@ type Options struct {
 	//
 	// samples every 64th trace on average.
 	ShouldSample func(traceID uint64) bool
-	// TrimUnsampledSpans turns potentially expensive operations on unsampled
-	// Spans into no-ops. More precisely, tags, baggage items, and log events
-	// are silently discarded. If NewSpanEventListener is set, the callbacks
-	// will still fire in that case.
+	// TrimSpans turns potentially expensive operations on Spans into no-ops.
+	// More precisely, tags, baggage items, and log events are silently discarded.
+	// If NewSpanEventListener is set, the callbacks will still fire in that case.
+	TrimSpans bool
+	// TrimUnsampledSpans is like TrimSpans, but only for unsampled Spans.
 	TrimUnsampledSpans bool
 	// Recorder receives Spans which have been finished.
 	Recorder SpanRecorder

@@ -64,8 +64,7 @@ func (s *spanImpl) SetOperationName(operationName string) opentracing.Span {
 }
 
 func (s *spanImpl) trim() bool {
-	return s.tracer.options.TrimSpans ||
-		(!s.raw.Sampled && s.tracer.options.TrimUnsampledSpans)
+	return !s.raw.Sampled && s.tracer.options.TrimUnsampledSpans
 }
 
 func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
@@ -106,7 +105,7 @@ func (s *spanImpl) Log(ld opentracing.LogData) {
 	defer s.onLog(ld)
 	s.Lock()
 	defer s.Unlock()
-	if s.trim() {
+	if s.trim() || s.tracer.options.DropAllLogs {
 		return
 	}
 

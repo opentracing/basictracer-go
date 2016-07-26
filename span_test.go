@@ -78,10 +78,8 @@ func TestSpan_Sampling(t *testing.T) {
 	assert.Equal(t, 1, len(recorder.GetSampledSpans()), "SamplingPriority=1 should turn on sampling")
 }
 
-// Currently only logs and user-added tags are trimmed (i.e. not baggage)
-func TestSpan_Trimming(t *testing.T) {
+func TestSpan_SingleLoggedTaggedSpan(t *testing.T) {
 	recorder := NewInMemoryRecorder()
-	// Tracer that never trims
 	tracer := NewWithOptions(Options{
 		Recorder:     recorder,
 		ShouldSample: func(traceID uint64) bool { return true }, // always sample
@@ -92,24 +90,27 @@ func TestSpan_Trimming(t *testing.T) {
 	span.Finish()
 	spans := recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
+	assert.Equal(t, "x", spans[0].Operation)
 	assert.Equal(t, 1, len(spans[0].Logs))
 	assert.Equal(t, "event", spans[0].Logs[0].Event)
 	assert.Equal(t, "payload", spans[0].Logs[0].Payload)
 	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
+}
 
-	recorder.Reset()
+func TestSpan_TrimUnsampledSpans(t *testing.T) {
+	recorder := NewInMemoryRecorder()
 	// Tracer that trims only unsampled but always samples
-	tracer = NewWithOptions(Options{
+	tracer := NewWithOptions(Options{
 		Recorder:           recorder,
 		ShouldSample:       func(traceID uint64) bool { return true }, // always sample
 		TrimUnsampledSpans: true,
 	})
 
-	span = tracer.StartSpan("x")
+	span := tracer.StartSpan("x")
 	span.LogEventWithPayload("event", "payload")
 	span.SetTag("tag", "value")
 	span.Finish()
-	spans = recorder.GetSpans()
+	spans := recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
 	assert.Equal(t, 1, len(spans[0].Logs))
 	assert.Equal(t, "event", spans[0].Logs[0].Event)
@@ -132,21 +133,25 @@ func TestSpan_Trimming(t *testing.T) {
 	assert.Equal(t, 1, len(spans))
 	assert.Equal(t, 0, len(spans[0].Logs))
 	assert.Equal(t, 0, len(spans[0].Tags))
+}
 
-	recorder.Reset()
-	// Tracer that always trims and always samples
-	tracer = NewWithOptions(Options{
+func TestSpan_DropAllLogs(t *testing.T) {
+	recorder := NewInMemoryRecorder()
+	// Tracer that drops logs
+	tracer := NewWithOptions(Options{
 		Recorder:     recorder,
 		ShouldSample: func(traceID uint64) bool { return true }, // always sample
-		TrimSpans:    true,
+		DropAllLogs:  true,
 	})
 
-	span = tracer.StartSpan("x")
+	span := tracer.StartSpan("x")
 	span.LogEventWithPayload("event", "payload")
 	span.SetTag("tag", "value")
 	span.Finish()
-	spans = recorder.GetSpans()
+	spans := recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
+	assert.Equal(t, "x", spans[0].Operation)
+	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
+	// Only logs are dropped
 	assert.Equal(t, 0, len(spans[0].Logs))
-	assert.Equal(t, 0, len(spans[0].Tags))
 }

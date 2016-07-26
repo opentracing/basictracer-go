@@ -100,7 +100,7 @@ func benchmarkInject(b *testing.B, format opentracing.BuiltinFormat, numItems in
 	var carrier interface{}
 	switch format {
 	case opentracing.TextMap:
-		carrier = opentracing.HTTPHeaderTextMapCarrier(http.Header{})
+		carrier = opentracing.HTTPHeadersCarrier(http.Header{})
 	case opentracing.Binary:
 		carrier = &bytes.Buffer{}
 	default:
@@ -123,7 +123,7 @@ func benchmarkExtract(b *testing.B, format opentracing.BuiltinFormat, numItems i
 	var carrier interface{}
 	switch format {
 	case opentracing.TextMap:
-		carrier = opentracing.HTTPHeaderTextMapCarrier(http.Header{})
+		carrier = opentracing.HTTPHeadersCarrier(http.Header{})
 	case opentracing.Binary:
 		carrier = &bytes.Buffer{}
 	default:

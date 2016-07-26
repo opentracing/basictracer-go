@@ -166,7 +166,7 @@ ReferencesLoop:
 		case opentracing.ChildOfRef,
 			opentracing.FollowsFromRef:
 
-			refMD := ref.Referee.(*SpanContext)
+			refMD := ref.ReferencedContext.(*SpanContext)
 			sp.raw.TraceID = refMD.TraceID
 			sp.raw.SpanID = randomID()
 			sp.raw.ParentSpanID = refMD.SpanID
@@ -226,7 +226,7 @@ var Delegator delegatorType
 
 func (t *tracerImpl) Inject(sc opentracing.SpanContext, format interface{}, carrier interface{}) error {
 	switch format {
-	case opentracing.TextMap:
+	case opentracing.TextMap, opentracing.HTTPHeaders:
 		return t.textPropagator.Inject(sc, carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Inject(sc, carrier)
@@ -239,7 +239,7 @@ func (t *tracerImpl) Inject(sc opentracing.SpanContext, format interface{}, carr
 
 func (t *tracerImpl) Extract(format interface{}, carrier interface{}) (opentracing.SpanContext, error) {
 	switch format {
-	case opentracing.TextMap:
+	case opentracing.TextMap, opentracing.HTTPHeaders:
 		return t.textPropagator.Extract(carrier)
 	case opentracing.Binary:
 		return t.binaryPropagator.Extract(carrier)

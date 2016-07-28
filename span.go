@@ -105,7 +105,7 @@ func (s *spanImpl) Log(ld opentracing.LogData) {
 	defer s.onLog(ld)
 	s.Lock()
 	defer s.Unlock()
-	if s.trim() {
+	if s.trim() || s.tracer.options.DropAllLogs {
 		return
 	}
 

@@ -28,9 +28,8 @@ type Options struct {
 	// samples every 64th trace on average.
 	ShouldSample func(traceID uint64) bool
 	// TrimUnsampledSpans turns potentially expensive operations on unsampled
-	// Spans into no-ops. More precisely, tags, baggage items, and log events
-	// are silently discarded. If NewSpanEventListener is set, the callbacks
-	// will still fire in that case.
+	// Spans into no-ops. More precisely, tags and log events are silently
+	// discarded. If NewSpanEventListener is set, the callbacks will still fire.
 	TrimUnsampledSpans bool
 	// Recorder receives Spans which have been finished.
 	Recorder SpanRecorder
@@ -38,6 +37,9 @@ type Options struct {
 	// attaching external code to trace events. See NetTraceIntegrator for a
 	// practical example, and event.go for the list of possible events.
 	NewSpanEventListener func() func(SpanEvent)
+	// DropAllLogs turns log events on all Spans into no-ops.
+	// If NewSpanEventListener is set, the callbacks will still fire.
+	DropAllLogs bool
 	// DebugAssertSingleGoroutine internally records the ID of the goroutine
 	// creating each Span and verifies that no operation is carried out on
 	// it on a different goroutine.

@@ -24,7 +24,7 @@ func client() {
 		span := opentracing.StartSpan("getInput")
 		ctx := opentracing.ContextWithSpan(context.Background(), span)
 		// Make sure that global baggage propagation works.
-		span.Context().SetBaggageItem("User", os.Getenv("USER"))
+		span.SetBaggageItem("User", os.Getenv("USER"))
 		span.LogEventWithPayload("ctx", ctx)
 		fmt.Print("\n\nEnter text (empty string to exit): ")
 		text, _ := reader.ReadString('\n')

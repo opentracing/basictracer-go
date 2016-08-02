@@ -135,7 +135,7 @@ func (t *tracerImpl) getSpan() *spanImpl {
 	}
 	return &spanImpl{
 		raw: RawSpan{
-			SpanContext: &SpanContext{},
+			Context: SpanContext{},
 		},
 	}
 }
@@ -166,28 +166,26 @@ ReferencesLoop:
 		case opentracing.ChildOfRef,
 			opentracing.FollowsFromRef:
 
-			refMD := ref.ReferencedContext.(*SpanContext)
-			sp.raw.TraceID = refMD.TraceID
-			sp.raw.SpanID = randomID()
-			sp.raw.ParentSpanID = refMD.SpanID
-			sp.raw.Sampled = refMD.Sampled
+			refCtx := ref.ReferencedContext.(SpanContext)
+			sp.raw.Context.TraceID = refCtx.TraceID
+			sp.raw.Context.SpanID = randomID()
+			sp.raw.Context.Sampled = refCtx.Sampled
+			sp.raw.ParentSpanID = refCtx.SpanID
 
-			refMD.baggageLock.Lock()
-			if l := len(refMD.Baggage); l > 0 {
-				sp.raw.Baggage = make(map[string]string, len(refMD.Baggage))
-				for k, v := range refMD.Baggage {
-					sp.raw.Baggage[k] = v
+			if l := len(refCtx.Baggage); l > 0 {
+				sp.raw.Context.Baggage = make(map[string]string, l)
+				for k, v := range refCtx.Baggage {
+					sp.raw.Context.Baggage[k] = v
 				}
 			}
-			refMD.baggageLock.Unlock()
 			break ReferencesLoop
 		}
 	}
-	if sp.raw.TraceID == 0 {
+	if sp.raw.Context.TraceID == 0 {
 		// No parent Span found; allocate new trace and span ids and determine
 		// the Sampled status.
-		sp.raw.TraceID, sp.raw.SpanID = randomID2()
-		sp.raw.Sampled = t.options.ShouldSample(sp.raw.TraceID)
+		sp.raw.Context.TraceID, sp.raw.Context.SpanID = randomID2()
+		sp.raw.Context.Sampled = t.options.ShouldSample(sp.raw.Context.TraceID)
 	}
 
 	return t.startSpanInternal(

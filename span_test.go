@@ -14,16 +14,16 @@ func TestSpan_Baggage(t *testing.T) {
 		ShouldSample: func(traceID uint64) bool { return true }, // always sample
 	})
 	span := tracer.StartSpan("x")
-	span.Context().SetBaggageItem("x", "y")
-	assert.Equal(t, "y", span.Context().BaggageItem("x"))
+	span.SetBaggageItem("x", "y")
+	assert.Equal(t, "y", span.BaggageItem("x"))
 	span.Finish()
 	spans := recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
-	assert.Equal(t, map[string]string{"x": "y"}, spans[0].Baggage)
+	assert.Equal(t, map[string]string{"x": "y"}, spans[0].Context.Baggage)
 
 	recorder.Reset()
 	span = tracer.StartSpan("x")
-	span.Context().SetBaggageItem("x", "y")
+	span.SetBaggageItem("x", "y")
 	baggage := make(map[string]string)
 	span.Context().ForeachBaggageItem(func(k, v string) bool {
 		baggage[k] = v
@@ -31,7 +31,7 @@ func TestSpan_Baggage(t *testing.T) {
 	})
 	assert.Equal(t, map[string]string{"x": "y"}, baggage)
 
-	span.Context().SetBaggageItem("a", "b")
+	span.SetBaggageItem("a", "b")
 	baggage = make(map[string]string)
 	span.Context().ForeachBaggageItem(func(k, v string) bool {
 		baggage[k] = v
@@ -41,7 +41,7 @@ func TestSpan_Baggage(t *testing.T) {
 	span.Finish()
 	spans = recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
-	assert.Equal(t, 2, len(spans[0].Baggage))
+	assert.Equal(t, 2, len(spans[0].Context.Baggage))
 }
 
 func TestSpan_Sampling(t *testing.T) {

@@ -1,11 +1,5 @@
 package basictracer
 
-import (
-	"sync"
-
-	"github.com/opentracing/opentracing-go"
-)
-
 // SpanContext holds the basic Span metadata.
 type SpanContext struct {
 	// A probabilistically unique identifier for a [multi-span] trace.
@@ -18,45 +12,31 @@ type SpanContext struct {
 	Sampled bool
 
 	// The span's associated baggage.
-	baggageLock sync.Mutex
-	Baggage     map[string]string // initialized on first use
-}
-
-// BaggageItem belongs to the opentracing.SpanContext interface
-func (c *SpanContext) BaggageItem(key string) string {
-	// TODO: if we want to support onBaggage, need a pointer to the bt.Span.
-	//   s.onBaggage(canonicalKey, val)
-	//   if s.trim() {
-	//   	return s
-	//   }
-
-	c.baggageLock.Lock()
-	defer c.baggageLock.Unlock()
-
-	if c.Baggage == nil {
-		return ""
-	}
-	return c.Baggage[key]
-}
-
-// SetBaggageItem belongs to the opentracing.SpanContext interface
-func (c *SpanContext) SetBaggageItem(key, val string) opentracing.SpanContext {
-	c.baggageLock.Lock()
-	defer c.baggageLock.Unlock()
-	if c.Baggage == nil {
-		c.Baggage = make(map[string]string)
-	}
-	c.Baggage[key] = val
-	return c
+	Baggage map[string]string // initialized on first use
 }
 
 // ForeachBaggageItem belongs to the opentracing.SpanContext interface
-func (c *SpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
-	c.baggageLock.Lock()
-	defer c.baggageLock.Unlock()
+func (c SpanContext) ForeachBaggageItem(handler func(k, v string) bool) {
 	for k, v := range c.Baggage {
 		if !handler(k, v) {
 			break
 		}
 	}
+}
+
+// WithBaggageItem returns an entirely new basictracer SpanContext with the
+// given key:value baggage pair set.
+func (c SpanContext) WithBaggageItem(key, val string) SpanContext {
+	var newBaggage map[string]string
+	if c.Baggage == nil {
+		newBaggage = map[string]string{key: val}
+	} else {
+		newBaggage = make(map[string]string, len(c.Baggage))
+		for k, v := range c.Baggage {
+			newBaggage[k] = v
+		}
+		newBaggage[key] = val
+	}
+	// Use positional parameters so the compiler will help catch new fields.
+	return SpanContext{c.TraceID, c.SpanID, c.Sampled, newBaggage}
 }

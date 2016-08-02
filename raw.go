@@ -8,9 +8,9 @@ import (
 
 // RawSpan encapsulates all state associated with a (finished) Span.
 type RawSpan struct {
-	// The RawSpan embeds its SpanContext. Those recording the RawSpan
-	// should also record the contents of its SpanContext.
-	*SpanContext
+	// Those recording the RawSpan should also record the contents of its
+	// SpanContext.
+	Context SpanContext
 
 	// The SpanID of this SpanContext's first intra-trace reference (i.e.,
 	// "parent"), or 0 if there is no parent.

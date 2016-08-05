@@ -135,11 +135,7 @@ func (t *tracerImpl) getSpan() *spanImpl {
 		sp.reset()
 		return sp
 	}
-	return &spanImpl{
-		raw: RawSpan{
-			Context: SpanContext{},
-		},
-	}
+	return &spanImpl{}
 }
 
 func (t *tracerImpl) StartSpanWithOptions(

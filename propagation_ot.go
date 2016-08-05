@@ -32,7 +32,7 @@ func (p *textMapPropagator) Inject(
 	spanContext opentracing.SpanContext,
 	opaqueCarrier interface{},
 ) error {
-	sc, ok := spanContext.(*SpanContext)
+	sc, ok := spanContext.(SpanContext)
 	if !ok {
 		return opentracing.ErrInvalidSpanContext
 	}
@@ -44,11 +44,9 @@ func (p *textMapPropagator) Inject(
 	carrier.Set(fieldNameSpanID, strconv.FormatUint(sc.SpanID, 16))
 	carrier.Set(fieldNameSampled, strconv.FormatBool(sc.Sampled))
 
-	sc.baggageLock.Lock()
 	for k, v := range sc.Baggage {
 		carrier.Set(prefixBaggage+k, v)
 	}
-	sc.baggageLock.Unlock()
 	return nil
 }
 
@@ -102,7 +100,7 @@ func (p *textMapPropagator) Extract(
 		return nil, opentracing.ErrSpanContextCorrupted
 	}
 
-	return &SpanContext{
+	return SpanContext{
 		TraceID: traceID,
 		SpanID:  spanID,
 		Sampled: sampled,
@@ -114,7 +112,7 @@ func (p *binaryPropagator) Inject(
 	spanContext opentracing.SpanContext,
 	opaqueCarrier interface{},
 ) error {
-	sc, ok := spanContext.(*SpanContext)
+	sc, ok := spanContext.(SpanContext)
 	if !ok {
 		return opentracing.ErrInvalidSpanContext
 	}
@@ -173,7 +171,7 @@ func (p *binaryPropagator) Extract(
 		return nil, opentracing.ErrSpanContextCorrupted
 	}
 
-	return &SpanContext{
+	return SpanContext{
 		TraceID: ctx.TraceId,
 		SpanID:  ctx.SpanId,
 		Sampled: ctx.Sampled,

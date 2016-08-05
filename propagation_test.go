@@ -43,7 +43,7 @@ func TestSpanPropagator(t *testing.T) {
 	tracer := basictracer.New(recorder)
 
 	sp := tracer.StartSpan(op)
-	sp.Context().SetBaggageItem("foo", "bar")
+	sp.SetBaggageItem("foo", "bar")
 
 	tmc := opentracing.HTTPHeadersCarrier(http.Header{})
 	tests := []struct {
@@ -81,14 +81,14 @@ func TestSpanPropagator(t *testing.T) {
 	exp.Start = time.Time{}.Add(1)
 
 	for i, sp := range spans {
-		if a, e := sp.ParentSpanID, exp.SpanID; a != e {
+		if a, e := sp.ParentSpanID, exp.Context.SpanID; a != e {
 			t.Fatalf("%d: ParentSpanID %d does not match expectation %d", i, a, e)
 		} else {
 			// Prepare for comparison.
-			sp.SpanID, sp.ParentSpanID = exp.SpanID, 0
+			sp.Context.SpanID, sp.ParentSpanID = exp.Context.SpanID, 0
 			sp.Duration, sp.Start = exp.Duration, exp.Start
 		}
-		if a, e := sp.TraceID, exp.TraceID; a != e {
+		if a, e := sp.Context.TraceID, exp.Context.TraceID; a != e {
 			t.Fatalf("%d: TraceID changed from %d to %d", i, e, a)
 		}
 		if !reflect.DeepEqual(exp, sp) {

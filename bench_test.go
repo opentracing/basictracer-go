@@ -26,7 +26,7 @@ func executeOps(sp opentracing.Span, numEvent, numTag, numItems int) {
 		sp.SetTag(tags[j], nil)
 	}
 	for j := 0; j < numItems; j++ {
-		sp.Context().SetBaggageItem(tags[j], tags[j])
+		sp.SetBaggageItem(tags[j], tags[j])
 	}
 }
 

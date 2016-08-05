@@ -24,7 +24,7 @@ func (p *accessorPropagator) Inject(
 	if !ok || dc == nil {
 		return opentracing.ErrInvalidCarrier
 	}
-	sc, ok := spanContext.(*SpanContext)
+	sc, ok := spanContext.(SpanContext)
 	if !ok {
 		return opentracing.ErrInvalidSpanContext
 	}
@@ -44,7 +44,7 @@ func (p *accessorPropagator) Extract(
 	}
 
 	traceID, spanID, sampled := dc.State()
-	sc := &SpanContext{
+	sc := SpanContext{
 		TraceID: traceID,
 		SpanID:  spanID,
 		Sampled: sampled,

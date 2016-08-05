@@ -52,7 +52,7 @@ func (s *spanImpl) reset() {
 	// some of the load. Hard to say how quickly that would be in practice
 	// though.
 	s.raw = RawSpan{
-		SpanContext: &SpanContext{},
+		Context: SpanContext{},
 	}
 }
 
@@ -64,7 +64,7 @@ func (s *spanImpl) SetOperationName(operationName string) opentracing.Span {
 }
 
 func (s *spanImpl) trim() bool {
-	return !s.raw.Sampled && s.tracer.options.TrimUnsampledSpans
+	return !s.raw.Context.Sampled && s.tracer.options.TrimUnsampledSpans
 }
 
 func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
@@ -73,7 +73,7 @@ func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
 	defer s.Unlock()
 	if key == string(ext.SamplingPriority) {
 		if v, ok := value.(uint16); ok {
-			s.raw.Sampled = v != 0
+			s.raw.Context.Sampled = v != 0
 			return s
 		}
 	}
@@ -155,7 +155,25 @@ func (s *spanImpl) Tracer() opentracing.Tracer {
 }
 
 func (s *spanImpl) Context() opentracing.SpanContext {
-	return s.raw.SpanContext
+	return s.raw.Context
+}
+
+func (s *spanImpl) SetBaggageItem(key, val string) opentracing.Span {
+	s.onBaggage(key, val)
+	if s.trim() {
+		return s
+	}
+
+	s.Lock()
+	defer s.Unlock()
+	s.raw.Context = s.raw.Context.WithBaggageItem(key, val)
+	return s
+}
+
+func (s *spanImpl) BaggageItem(key string) string {
+	s.Lock()
+	defer s.Unlock()
+	return s.raw.Context.Baggage[key]
 }
 
 func (s *spanImpl) Operation() string {

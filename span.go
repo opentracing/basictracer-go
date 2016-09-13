@@ -1,11 +1,13 @@
 package basictracer
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 // Span provides access to the essential details of the span, for use
@@ -88,6 +90,35 @@ func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
 	return s
 }
 
+func (s *spanImpl) LogKV(keyValues ...interface{}) {
+	if len(keyValues)%2 != 0 {
+		s.LogFields(log.Error(fmt.Errorf("Non-even keyValues len: %v", len(keyValues))))
+		return
+	}
+	fields, err := log.InterleavedKVToFields(keyValues...)
+	if err != nil {
+		s.LogFields(log.Error(err), log.String("function", "LogKV"))
+		return
+	}
+	s.LogFields(fields...)
+}
+
+func (s *spanImpl) LogFields(fields ...log.Field) {
+	lr := opentracing.LogRecord{
+		Fields: fields,
+	}
+	defer s.onLogFields(lr)
+	s.Lock()
+	defer s.Unlock()
+	if s.trim() || s.tracer.options.DropAllLogs {
+		return
+	}
+	if lr.Timestamp.IsZero() {
+		lr.Timestamp = time.Now()
+	}
+	s.raw.Logs = append(s.raw.Logs, lr)
+}
+
 func (s *spanImpl) LogEvent(event string) {
 	s.Log(opentracing.LogData{
 		Event: event,
@@ -113,7 +144,7 @@ func (s *spanImpl) Log(ld opentracing.LogData) {
 		ld.Timestamp = time.Now()
 	}
 
-	s.raw.Logs = append(s.raw.Logs, ld)
+	s.raw.Logs = append(s.raw.Logs, ld.ToLogRecord())
 }
 
 func (s *spanImpl) Finish() {
@@ -129,8 +160,11 @@ func (s *spanImpl) FinishWithOptions(opts opentracing.FinishOptions) {
 
 	s.Lock()
 	defer s.Unlock()
-	if opts.BulkLogData != nil {
-		s.raw.Logs = append(s.raw.Logs, opts.BulkLogData...)
+	if opts.LogRecords != nil {
+		s.raw.Logs = append(s.raw.Logs, opts.LogRecords...)
+	}
+	for _, ld := range opts.BulkLogData {
+		s.raw.Logs = append(s.raw.Logs, ld.ToLogRecord())
 	}
 	s.raw.Duration = duration
 

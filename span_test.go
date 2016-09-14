@@ -96,11 +96,11 @@ func TestSpan_SingleLoggedTaggedSpan(t *testing.T) {
 	assert.Equal(t, "x", spans[0].Operation)
 	assert.Equal(t, 2, len(spans[0].Logs))
 	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
-	fv := log.NewFieldValidator(t, spans[0].Logs[0].Fields)
+	fv := NewLogFieldValidator(t, spans[0].Logs[0].Fields)
 	fv.
 		ExpectNextFieldEquals("event", reflect.String, "event").
 		ExpectNextFieldEquals("payload", reflect.Interface, "payload")
-	fv = log.NewFieldValidator(t, spans[0].Logs[1].Fields)
+	fv = NewLogFieldValidator(t, spans[0].Logs[1].Fields)
 	fv.
 		ExpectNextFieldEquals("key_str", reflect.String, "value").
 		ExpectNextFieldEquals("32bit", reflect.Uint32, "4294967295")
@@ -123,7 +123,7 @@ func TestSpan_TrimUnsampledSpans(t *testing.T) {
 	assert.Equal(t, 1, len(spans))
 	assert.Equal(t, 1, len(spans[0].Logs))
 	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
-	fv := log.NewFieldValidator(t, spans[0].Logs[0].Fields)
+	fv := NewLogFieldValidator(t, spans[0].Logs[0].Fields)
 	fv.
 		ExpectNextFieldEquals("key_str", reflect.String, "value").
 		ExpectNextFieldEquals("32bit", reflect.Uint32, "4294967295")

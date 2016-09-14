@@ -1,7 +1,6 @@
 package basictracer
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -91,10 +90,6 @@ func (s *spanImpl) SetTag(key string, value interface{}) opentracing.Span {
 }
 
 func (s *spanImpl) LogKV(keyValues ...interface{}) {
-	if len(keyValues)%2 != 0 {
-		s.LogFields(log.Error(fmt.Errorf("Non-even keyValues len: %v", len(keyValues))))
-		return
-	}
 	fields, err := log.InterleavedKVToFields(keyValues...)
 	if err != nil {
 		s.LogFields(log.Error(err), log.String("function", "LogKV"))

@@ -2,7 +2,6 @@ package dapperish
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/opentracing/basictracer-go"
 )
@@ -38,6 +37,6 @@ func (t *TrivialRecorder) RecordSpan(span basictracer.RawSpan) {
 		span.Context, span.Context.Baggage)
 	for i, l := range span.Logs {
 		fmt.Printf(
-			"    log %v @ %v: %v --> %v\n", i, l.Timestamp, l.Event, reflect.TypeOf(l.Payload))
+			"    log %v @ %v: %v\n", i, l.Timestamp, l.Fields)
 	}
 }

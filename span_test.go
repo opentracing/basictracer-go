@@ -1,10 +1,12 @@
 package basictracer
 
 import (
+	"reflect"
 	"testing"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -86,15 +88,22 @@ func TestSpan_SingleLoggedTaggedSpan(t *testing.T) {
 	})
 	span := tracer.StartSpan("x")
 	span.LogEventWithPayload("event", "payload")
+	span.LogFields(log.String("key_str", "value"), log.Uint32("32bit", 4294967295))
 	span.SetTag("tag", "value")
 	span.Finish()
 	spans := recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
 	assert.Equal(t, "x", spans[0].Operation)
-	assert.Equal(t, 1, len(spans[0].Logs))
-	assert.Equal(t, "event", spans[0].Logs[0].Event)
-	assert.Equal(t, "payload", spans[0].Logs[0].Payload)
+	assert.Equal(t, 2, len(spans[0].Logs))
 	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
+	fv := NewLogFieldValidator(t, spans[0].Logs[0].Fields)
+	fv.
+		ExpectNextFieldEquals("event", reflect.String, "event").
+		ExpectNextFieldEquals("payload", reflect.Interface, "payload")
+	fv = NewLogFieldValidator(t, spans[0].Logs[1].Fields)
+	fv.
+		ExpectNextFieldEquals("key_str", reflect.String, "value").
+		ExpectNextFieldEquals("32bit", reflect.Uint32, "4294967295")
 }
 
 func TestSpan_TrimUnsampledSpans(t *testing.T) {
@@ -107,15 +116,17 @@ func TestSpan_TrimUnsampledSpans(t *testing.T) {
 	})
 
 	span := tracer.StartSpan("x")
-	span.LogEventWithPayload("event", "payload")
+	span.LogFields(log.String("key_str", "value"), log.Uint32("32bit", 4294967295))
 	span.SetTag("tag", "value")
 	span.Finish()
 	spans := recorder.GetSpans()
 	assert.Equal(t, 1, len(spans))
 	assert.Equal(t, 1, len(spans[0].Logs))
-	assert.Equal(t, "event", spans[0].Logs[0].Event)
-	assert.Equal(t, "payload", spans[0].Logs[0].Payload)
 	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
+	fv := NewLogFieldValidator(t, spans[0].Logs[0].Fields)
+	fv.
+		ExpectNextFieldEquals("key_str", reflect.String, "value").
+		ExpectNextFieldEquals("32bit", reflect.Uint32, "4294967295")
 
 	recorder.Reset()
 	// Tracer that trims only unsampled and never samples
@@ -126,7 +137,7 @@ func TestSpan_TrimUnsampledSpans(t *testing.T) {
 	})
 
 	span = tracer.StartSpan("x")
-	span.LogEventWithPayload("event", "payload")
+	span.LogFields(log.String("key_str", "value"), log.Uint32("32bit", 4294967295))
 	span.SetTag("tag", "value")
 	span.Finish()
 	spans = recorder.GetSpans()
@@ -145,7 +156,7 @@ func TestSpan_DropAllLogs(t *testing.T) {
 	})
 
 	span := tracer.StartSpan("x")
-	span.LogEventWithPayload("event", "payload")
+	span.LogFields(log.String("key_str", "value"), log.Uint32("32bit", 4294967295))
 	span.SetTag("tag", "value")
 	span.Finish()
 	spans := recorder.GetSpans()

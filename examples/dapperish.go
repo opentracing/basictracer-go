@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
+	golog "log"
 	"net/http"
 	"os"
 	"runtime"
@@ -16,6 +16,7 @@ import (
 	"github.com/opentracing/basictracer-go/examples/dapperish"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 func client() {
@@ -25,7 +26,7 @@ func client() {
 		ctx := opentracing.ContextWithSpan(context.Background(), span)
 		// Make sure that global baggage propagation works.
 		span.SetBaggageItem("User", os.Getenv("USER"))
-		span.LogEventWithPayload("ctx", ctx)
+		span.LogFields(log.Object("ctx", ctx))
 		fmt.Print("\n\nEnter text (empty string to exit): ")
 		text, _ := reader.ReadString('\n')
 		text = strings.TrimSpace(text)
@@ -34,7 +35,7 @@ func client() {
 			os.Exit(0)
 		}
 
-		span.LogEvent(text)
+		span.LogFields(log.String("user text", text))
 
 		httpClient := &http.Client{}
 		httpReq, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewReader([]byte(text)))
@@ -45,9 +46,9 @@ func client() {
 		}
 		resp, err := httpClient.Do(httpReq)
 		if err != nil {
-			span.LogEventWithPayload("error", err)
+			span.LogFields(log.Error(err))
 		} else {
-			span.LogEventWithPayload("got response", resp)
+			span.LogFields(log.Object("response", resp))
 		}
 
 		span.Finish()
@@ -70,12 +71,12 @@ func server() {
 
 		fullBody, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			serverSpan.LogEventWithPayload("body read error", err)
+			serverSpan.LogFields(log.Error(err))
 		}
-		serverSpan.LogEventWithPayload("got request with body", string(fullBody))
+		serverSpan.LogFields(log.String("request body", string(fullBody)))
 	})
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	golog.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func main() {

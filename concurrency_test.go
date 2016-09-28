@@ -1,6 +1,7 @@
 package basictracer
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
@@ -40,8 +41,10 @@ func TestDebugAssertUseAfterFinish(t *testing.T) {
 	opts.Recorder = NewInMemoryRecorder()
 	opts.DebugAssertUseAfterFinish = true
 	tracer := NewWithOptions(opts)
+	const msg = "I shall be finished"
 	for _, double := range []bool{false, true} {
 		sp := tracer.StartSpan(op)
+		sp.Log(opentracing.LogData{Event: msg})
 		if double {
 			sp.Finish()
 		}
@@ -49,9 +52,13 @@ func TestDebugAssertUseAfterFinish(t *testing.T) {
 		func() {
 			defer func() {
 				r := recover()
-				_, panicked = r.(*errAssertionFailed)
+				var assertionErr error
+				assertionErr, panicked = r.(*errAssertionFailed)
 				if !panicked && r != nil {
 					panic(r)
+				}
+				if panicked && !strings.Contains(assertionErr.Error(), msg) {
+					t.Fatalf("debug output did not contain log message '%s': %+v", msg, assertionErr)
 				}
 				spImpl := sp.(*spanImpl)
 				// The panic should leave the Mutex unlocked.

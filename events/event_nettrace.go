@@ -13,6 +13,7 @@ var NetTraceIntegrator = func() func(basictracer.SpanEvent) {
 		switch t := e.(type) {
 		case basictracer.EventCreate:
 			tr = trace.New("tracing", t.OperationName)
+			tr.SetMaxEvents(1000)
 		case basictracer.EventFinish:
 			tr.Finish()
 		case basictracer.EventLog:

@@ -2,6 +2,7 @@ package basictracer
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
 	opentracing "github.com/opentracing/opentracing-go"
@@ -165,4 +166,59 @@ func TestSpan_DropAllLogs(t *testing.T) {
 	assert.Equal(t, opentracing.Tags{"tag": "value"}, spans[0].Tags)
 	// Only logs are dropped
 	assert.Equal(t, 0, len(spans[0].Logs))
+}
+
+func TestSpan_MaxLogSperSpan(t *testing.T) {
+	for _, limit := range []int{1, 2, 3, 5, 10, 15, 20} {
+		for _, numLogs := range []int{1, 2, 3, 5, 10, 15, 20, 30, 40, 50} {
+			recorder := NewInMemoryRecorder()
+			// Tracer that only retains the last <limit> logs.
+			tracer := NewWithOptions(Options{
+				Recorder:       recorder,
+				ShouldSample:   func(traceID uint64) bool { return true }, // always sample
+				MaxLogsPerSpan: limit,
+			})
+
+			span := tracer.StartSpan("x")
+			for i := 0; i < numLogs; i++ {
+				span.LogKV("eventIdx", i)
+			}
+			span.Finish()
+
+			spans := recorder.GetSpans()
+			assert.Equal(t, 1, len(spans))
+			assert.Equal(t, "x", spans[0].Operation)
+
+			logs := spans[0].Logs
+			var firstLogs, lastLogs []opentracing.LogRecord
+			if numLogs <= limit {
+				assert.Equal(t, numLogs, len(logs))
+				firstLogs = logs
+			} else {
+				assert.Equal(t, limit, len(logs))
+				if len(logs) > 0 {
+					numOld := (len(logs) - 1) / 2
+					firstLogs = logs[:numOld]
+					lastLogs = logs[numOld+1:]
+
+					fv := NewLogFieldValidator(t, logs[numOld].Fields)
+					fv = fv.ExpectNextFieldEquals("event", reflect.String, "dropped Span logs")
+					fv = fv.ExpectNextFieldEquals(
+						"dropped_log_count", reflect.Int, strconv.Itoa(numLogs-limit+1),
+					)
+					fv.ExpectNextFieldEquals("component", reflect.String, "basictracer")
+				}
+			}
+
+			for i, lr := range firstLogs {
+				fv := NewLogFieldValidator(t, lr.Fields)
+				fv.ExpectNextFieldEquals("eventIdx", reflect.Int, strconv.Itoa(i))
+			}
+
+			for i, lr := range lastLogs {
+				fv := NewLogFieldValidator(t, lr.Fields)
+				fv.ExpectNextFieldEquals("eventIdx", reflect.Int, strconv.Itoa(numLogs-len(lastLogs)+i))
+			}
+		}
+	}
 }

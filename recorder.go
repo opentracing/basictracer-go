@@ -58,3 +58,18 @@ func (r *InMemorySpanRecorder) Reset() {
 	defer r.Unlock()
 	r.spans = nil
 }
+
+type multiRecorder []SpanRecorder
+
+func (mr multiRecorder) RecordSpan(span RawSpan) {
+	for _, r := range mr {
+		r.RecordSpan(span)
+	}
+}
+
+// MultiRecorder creates a recorder that duplicates its writes to all the provided recorders.
+func MultiRecorder(recorders ...SpanRecorder) SpanRecorder {
+	mr := make(multiRecorder, len(recorders))
+	copy(mr, recorders)
+	return mr
+}

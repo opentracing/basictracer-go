@@ -8,19 +8,21 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-func TestAPICheck(t *testing.T) {
-	apiSuite := harness.NewAPICheckSuite(func() (tracer ot.Tracer, closer func()) {
-		tracer = NewWithOptions(Options{
-			Recorder:     NewInMemoryRecorder(),
-			ShouldSample: func(traceID uint64) bool { return true }, // always sample
-		})
-		return tracer, nil
-	}, harness.APICheckCapabilities{
-		CheckBaggageValues: true,
-		CheckInject:        true,
-		CheckExtract:       true,
-		Probe:              apiCheckProbe{},
+// newTracer creates a new tracer for each test, and returns a nil cleanup function.
+func newTracer() (tracer ot.Tracer, closer func()) {
+	tracer = NewWithOptions(Options{
+		Recorder:     NewInMemoryRecorder(),
+		ShouldSample: func(traceID uint64) bool { return true }, // always sample
 	})
+	return tracer, nil
+}
+
+func TestAPICheck(t *testing.T) {
+	apiSuite := harness.NewAPICheckSuite(
+		newTracer,
+		harness.CheckEverything{},
+		harness.UseProbe{apiCheckProbe{}},
+	)
 	suite.Run(t, apiSuite)
 }
 
@@ -40,8 +42,8 @@ func (apiCheckProbe) SameTrace(first, second ot.Span) bool {
 	return span1.raw.Context.TraceID == span2.raw.Context.TraceID
 }
 
-// SameTraceContext helps tests assert that a span and a span context are from the same trace.
-func (apiCheckProbe) SameTraceContext(span ot.Span, spanContext ot.SpanContext) bool {
+// SameSpanContext helps tests assert that a span and a context are from the same trace and span.
+func (apiCheckProbe) SameSpanContext(span ot.Span, spanContext ot.SpanContext) bool {
 	sp, ok := span.(*spanImpl)
 	if !ok {
 		return false
@@ -50,5 +52,5 @@ func (apiCheckProbe) SameTraceContext(span ot.Span, spanContext ot.SpanContext) 
 	if !ok {
 		return false
 	}
-	return sp.raw.Context.TraceID == ctx.TraceID
+	return sp.raw.Context.TraceID == ctx.TraceID && sp.raw.Context.SpanID == ctx.SpanID
 }

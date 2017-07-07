@@ -5,7 +5,6 @@ import (
 
 	ot "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/harness"
-	"github.com/stretchr/testify/suite"
 )
 
 // newTracer creates a new tracer for each test, and returns a nil cleanup function.
@@ -18,12 +17,11 @@ func newTracer() (tracer ot.Tracer, closer func()) {
 }
 
 func TestAPICheck(t *testing.T) {
-	apiSuite := harness.NewAPICheckSuite(
+	harness.RunAPIChecks(t,
 		newTracer,
-		harness.CheckEverything{},
-		harness.UseProbe{apiCheckProbe{}},
+		harness.CheckEverything(),
+		harness.UseProbe(apiCheckProbe{}),
 	)
-	suite.Run(t, apiSuite)
 }
 
 // implements harness.APICheckProbe

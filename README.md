@@ -6,3 +6,9 @@ The Go incarnation of the cross-platform "BasicTracer" reference implementation 
 ## Status
 
 In early development: there will be backwards-incompatible changes so _caveat emptor_ for now!
+
+## License
+
+The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+
+

@@ -6,3 +6,7 @@ The Go incarnation of the cross-platform "BasicTracer" reference implementation 
 ## Status
 
 In early development: there will be backwards-incompatible changes so _caveat emptor_ for now!
+
+## License
+
+By contributing to OpenTracing documentation repository, you agree that your contributions will be licensed under its [MIT License](./LICENSE).

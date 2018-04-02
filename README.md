@@ -9,4 +9,4 @@ In early development: there will be backwards-incompatible changes so _caveat em
 
 ## License
 
-By contributing to OpenTracing documentation repository, you agree that your contributions will be licensed under its [MIT License](./LICENSE).
+By contributing to OpenTracing documentation repository, you agree that your contributions will be licensed under its [Apache 2.0 License](./LICENSE).

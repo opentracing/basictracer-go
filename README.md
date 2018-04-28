@@ -6,3 +6,7 @@ The Go incarnation of the cross-platform "BasicTracer" reference implementation 
 ## Status
 
 In early development: there will be backwards-incompatible changes so _caveat emptor_ for now!
+
+## Licensing
+
+[Apache 2.0 License](./LICENSE).

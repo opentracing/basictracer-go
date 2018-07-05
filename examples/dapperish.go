@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"github.com/opentracing/basictracer-go/examples/dapperish"
 	opentracing "github.com/opentracing/opentracing-go"
@@ -67,7 +67,7 @@ func server() {
 			"serverSpan",
 			ext.RPCServerOption(wireSpanContext),
 		)
-		serverSpan.SetTag(ext.Component, "server")
+		serverSpan.SetTag(string(ext.Component), "server")
 		defer serverSpan.Finish()
 
 		fullBody, err := ioutil.ReadAll(req.Body)

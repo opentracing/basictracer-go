@@ -40,7 +40,7 @@ func client() {
 		httpClient := &http.Client{}
 		httpReq, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewReader([]byte(text)))
 		textCarrier := opentracing.HTTPHeadersCarrier(httpReq.Header)
-		err := span.Tracer().Inject(span.Context(), opentracing.TextMap, textCarrier)
+		err := span.Tracer().Inject(span.Context(), opentracing.HTTPHeaders, textCarrier)
 		if err != nil {
 			panic(err)
 		}
@@ -59,14 +59,15 @@ func server() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		textCarrier := opentracing.HTTPHeadersCarrier(req.Header)
 		wireSpanContext, err := opentracing.GlobalTracer().Extract(
-			opentracing.TextMap, textCarrier)
+			opentracing.HTTPHeaders, textCarrier)
 		if err != nil {
 			panic(err)
 		}
 		serverSpan := opentracing.GlobalTracer().StartSpan(
 			"serverSpan",
-			ext.RPCServerOption(wireSpanContext))
-		serverSpan.SetTag("component", "server")
+			ext.RPCServerOption(wireSpanContext),
+		)
+		serverSpan.SetTag(string(ext.Component), "server")
 		defer serverSpan.Finish()
 
 		fullBody, err := ioutil.ReadAll(req.Body)

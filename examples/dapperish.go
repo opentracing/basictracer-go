@@ -59,14 +59,15 @@ func server() {
 	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		textCarrier := opentracing.HTTPHeadersCarrier(req.Header)
 		wireSpanContext, err := opentracing.GlobalTracer().Extract(
-			opentracing.TextMap, textCarrier)
+			opentracing.HTTPHeaders, textCarrier)
 		if err != nil {
 			panic(err)
 		}
 		serverSpan := opentracing.GlobalTracer().StartSpan(
 			"serverSpan",
-			ext.RPCServerOption(wireSpanContext))
-		serverSpan.SetTag("component", "server")
+			ext.RPCServerOption(wireSpanContext),
+		)
+		serverSpan.SetTag(ext.Component, "server")
 		defer serverSpan.Finish()
 
 		fullBody, err := ioutil.ReadAll(req.Body)

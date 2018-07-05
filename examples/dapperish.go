@@ -40,7 +40,7 @@ func client() {
 		httpClient := &http.Client{}
 		httpReq, _ := http.NewRequest("POST", "http://localhost:8080/", bytes.NewReader([]byte(text)))
 		textCarrier := opentracing.HTTPHeadersCarrier(httpReq.Header)
-		err := span.Tracer().Inject(span.Context(), opentracing.TextMap, textCarrier)
+		err := span.Tracer().Inject(span.Context(), opentracing.HTTPHeaders, textCarrier)
 		if err != nil {
 			panic(err)
 		}

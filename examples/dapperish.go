@@ -11,7 +11,7 @@ import (
 	"runtime"
 	"strings"
 
-	"context"
+	"golang.org/x/net/context"
 
 	"github.com/opentracing/basictracer-go/examples/dapperish"
 	opentracing "github.com/opentracing/opentracing-go"

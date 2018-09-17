@@ -53,7 +53,7 @@ func singleSourceRandomID() uint64 {
 	return uint64(randomIDGen.Int63())
 }
 
-func BenchmarkSingleSourceGenSeededGUID(b *testing.B) {
+func BenchmarkSingleSourceRandomID(b *testing.B) {
 	// run with 100000 goroutines
 	b.SetParallelism(100000)
 	b.RunParallel(func(pb *testing.PB) {

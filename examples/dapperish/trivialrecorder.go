@@ -6,7 +6,7 @@ import (
 	"github.com/opentracing/basictracer-go"
 )
 
-// TrivialRecorder implements the basictracer.Recorder interface.
+// TrivialRecorder implements the basictracer.SpanRecorder interface.
 type TrivialRecorder struct {
 	processName string
 	tags        map[string]string

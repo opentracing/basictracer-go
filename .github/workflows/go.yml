@@ -22,6 +22,7 @@ jobs:
           version: latest
 
   build:
+    needs: golangci
     strategy:
       matrix:
         go: [1.13, 1.14, 1.15, 1.16, 1.17]
@@ -54,8 +55,12 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: go-${{ matrix.go }}
-        
-    - run: make bench
+  bench:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: make bench
           
 
       

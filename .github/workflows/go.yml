@@ -49,18 +49,11 @@ jobs:
 
     - name: Test
       run: go test -race -v -count=1 -coverprofile=coverage.out ./...
+      
+    - run: make bench
 
     - name: Upload Test Coverage
       uses: codecov/codecov-action@v2
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: go-${{ matrix.go }}
-  bench:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: make bench
-          
-
-      

@@ -52,7 +52,10 @@ jobs:
     - name: Upload Test Coverage
       uses: codecov/codecov-action@v2
       with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: go-${{ matrix.go }}
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: go-${{ matrix.go }}
+        
+    - run: make bench
+          
 
       

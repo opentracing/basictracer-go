@@ -8,5 +8,5 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b
-	golang.org/x/net v0.0.0-20201021035429-f5854403a974
+	golang.org/x/net v0.7.0
 )
